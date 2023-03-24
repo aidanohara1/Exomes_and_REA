@@ -1,0 +1,116 @@
+---
+title: "andrew"
+author: "xiaoyanbin Cai and Jingyu Liang"
+date: "2023-03-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(hrbrthemes)
+```
+
+```{r}
+AGiles <- read.csv("AGiles.csv")
+
+```
+
+```{r}
+DefaultREA = unique(AGiles$Default.REA.buckets)
+whiteO <- AGiles[which(AGiles$Default.REA.buckets=="White"),]
+HispO <- AGiles[which(AGiles$Default.REA.buckets=="Hispanic / Latino"),]
+OtherO <- AGiles[which(AGiles$Default.REA.buckets=="Other"),]
+MultiO <- AGiles[which(AGiles$Default.REA.buckets=="Multiracial"),]
+AshO <- AGiles[which(AGiles$Default.REA.buckets=="Ashkenazi Jewish"),]
+AfriO <- AGiles[which(AGiles$Default.REA.buckets=="African American / Black"),]
+AsianO <- AGiles[which(AGiles$Default.REA.buckets=="Asian"),]
+NotAO <- AGiles[which(AGiles$Default.REA.buckets=="N/A"),]
+```
+
+
+# plot white
+```{r cars}
+ggplot(whiteO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for Original white") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+```
+```{r}
+ggplot(HispO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for Original Hispanic / Latino") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+
+```
+
+
+```{r}
+ggplot(OtherO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for Other") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+```
+```{r}
+ggplot(MultiO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for Multieacial") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+```
+
+```{r}
+ggplot(AshO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for Ashkenazi Jewish") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+```
+
+```{r}
+ggplot(AfriO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for African American / Black") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+```
+
+```{r}
+ggplot(AsianO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for Asian") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+```
+
+```{r}
+ggplot(NotAO, aes(x=Report.Outcome, fill=Report.Outcome )) + 
+  geom_bar( ) +
+  xlab("Report Outcome")+
+  ggtitle("Outcome for N/A") +
+  scale_fill_hue(c = 60) +
+  theme(legend.position="none")
+```
+
+

@@ -1,0 +1,245 @@
+---
+title: "Report for A Giles"
+author: "Aidan O'Hara"
+date: "2023-03-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(Rmisc) # maybe no?
+library(dplyr)
+library(gmodels)
+library(ggplot2)
+library(nnet)
+
+# read in
+AGiles <- read.csv("AGiles.csv")
+AGiles_OG <- read.csv("AGiles_originalOnly.csv")
+# original reports are already isolated in Agiles_OG
+
+AGiles <- rename(AGiles, 
+       abcBuckets = `ABC.REA.buckets`,
+       sex = `Sex..reported.at.birth.`,
+       age = `Age.Group`,
+       indication = `Indication.Diagnostic.Rate`,
+       reclass = Reclassified,
+       reanaz = Reanalyed)
+
+AGiles_OG <- rename(AGiles_OG, 
+       abcBuckets = `ABC.REA.buckets`,
+       sex = `Sex..reported.at.birth.`,
+       age = `Age.Group`,
+       indication = `Indication.Diagnostic.Rate`,
+       reclass = Reclassified,
+       reanaz = Reanalyed)
+
+
+# 
+# colnames(AGiles)[11] = "abcBuckets"
+# colnames(AGiles_OG)[10] = "abcBuckets"
+# colnames(AGiles)[16] <- "sex"
+# colnames(AGiles)[17] <- "age"
+# colnames(AGiles_OG)[14] <- "sex"
+# colnames(AGiles_OG)[15] <- "age"
+
+AGiles$`Report.Outcome`[AGiles$`Report.Outcome` == "positive"] <- "Positive"
+
+# factorize report outcome
+AGiles_OG <- mutate(AGiles_OG, classification = ifelse(`Report.Outcome`=="Positive",1,
+                                                       ifelse(`Report.Outcome`=="Uncertain",0,-1)))
+# factorize report outcome
+AGiles <- mutate(AGiles, classification = ifelse(`Report.Outcome`=="Positive",1,
+                                                       ifelse(`Report.Outcome`=="Uncertain",0,-1)))
+
+# factorize report outcome again
+AGiles_OG <- mutate(AGiles_OG, reclassification = ifelse(`Report.Outcome`=="Positive",1,0))
+# factorize report outcome again
+AGiles <- mutate(AGiles, reclassification = ifelse(`Report.Outcome`=="Negative",0,1))
+
+
+# remove repeated observations by keeping only the newest log
+latestAgiles <- group_by(AGiles, `New.study.ID`) %>%
+  slice(which.max(as.Date(`Report.Date`, '%M/%Y'))) %>%
+  mutate(binReanaz = ifelse(`Original.Latest` != "Original", 1,0))
+
+
+# Bust this out if you want to remove Original logs of exomes that have been reanalyzed
+#   BUT you want to keep the multiple reanalysis logs
+
+# # tally of id entries per id, helper
+# idEntries <- group_by(AGiles, `New.study.ID`) %>%
+#   tally()
+# 
+# # the agiles Ill use for analysis, 
+# # most important note is the ommision of Orgianal reports about exomes that have been reanalyzed.
+# # keeping multiple reanalysis still... There are tradeoffs
+# omitAgiles <- inner_join(AGiles, idEntries, by = "New.study.ID") %>%
+#   filter(!(n>1 & `Original.Latest` == "Original"))
+
+
+
+
+
+```
+
+
+```{r reclassificationEDAPlots}
+### RECLASSSIFICATION plot ###
+reclassMeans <- group_by(omitAgiles, abcBuckets) %>%
+  dplyr::summarise(meanReclassification = mean(Reclassified),
+            uci_perGroup = CI(Reclassified)['lower'],
+            lci_perGroup = CI(Reclassified)['upper']) %>%
+  arrange(abcBuckets)
+
+reanazMeans <- group_by(omitAgiles, abcBuckets) %>%
+  dplyr::summarise(meanReanaz = mean(Reanalyed),
+                   uci_perGroup = CI(Reanalyed)['lower'],
+                   lci_perGroup = CI(Reanalyed)['upper']) %>%
+  arrange(abcBuckets)
+
+classMeans <- group_by(omitAgiles, abcBuckets) %>%
+  dplyr::summarise(meanClassification = mean(classification),
+                   uci_perGroup = CI(classification)['lower'],
+                   lci_perGroup = CI(classification)['upper']) %>%
+  arrange(abcBuckets)
+
+latClassMeans <- group_by(latestAgiles, abcBuckets) %>%
+  dplyr::summarise(meanClassification = mean(classification),
+                   uci_perGroup = CI(classification)['lower'],
+                   lci_perGroup = CI(classification)['upper']) %>%
+  arrange(abcBuckets)
+
+
+reclassGG <- ggplot(reclassMeans) +
+  geom_bar( aes(x=abcBuckets, y=meanReclassification), stat = "identity", alpha = 0.05) +
+  geom_errorbar( aes(x=abcBuckets, ymin=lci_perGroup, ymax=uci_perGroup, color = abcBuckets), alpha=0.9, size=1)+
+  coord_flip()+
+  theme_dark()
+
+reanazGG <- ggplot(reanazMeans) +
+  geom_bar( aes(x=abcBuckets, y=meanReanaz), stat = "identity", alpha = 0.05) +
+  geom_errorbar( aes(x=abcBuckets, ymin=lci_perGroup, ymax=uci_perGroup, color = abcBuckets), alpha=0.9, size=1)+
+  coord_flip()+
+  theme_dark()
+
+classGG <- ggplot(classMeans) +
+  geom_bar( aes(x=abcBuckets, y=meanClassification), stat = "identity", alpha = 0.05) +
+  geom_errorbar( aes(x=abcBuckets, ymin=lci_perGroup, ymax=uci_perGroup, color = abcBuckets), alpha=0.9, size=1)+
+  ggtitle("Cumulative classifications") +
+  coord_flip()+
+  theme_dark()
+
+latClassGG <- ggplot(latClassMeans) +
+  geom_bar( aes(x=abcBuckets, y=meanClassification), stat = "identity", alpha = 0.05) +
+  geom_errorbar( aes(x=abcBuckets, ymin=lci_perGroup, ymax=uci_perGroup, color = abcBuckets), alpha=0.9, size=1)+
+  ggtitle("Up to Date classifications") +
+  coord_flip()+
+  theme_dark()
+
+reclassGG
+reanazGG
+classGG
+latClassGG
+```
+
+```{r}
+
+newOg <- AGiles_OG %>% group_by(abcBuckets, classification) %>%
+  summarise(n = n()) %>%
+  group_by(abcBuckets) %>% mutate(prob = n / sum(n))
+
+View(newOg)
+
+newLatest <- latestAgiles %>% group_by(abcBuckets, classification) %>%
+  summarise(n = n()) %>%
+  group_by(abcBuckets) %>% mutate(prob = n / sum(n)) 
+
+View(newLatest)
+
+
+```
+
+
+
+```{r model1}
+# Does the distribution of original exome outcomes differ by REA? #
+originals <- AGiles_OG
+
+age_levels <- c("Fetal", "<1", "1-5", "6-10", "11-18", "19-35", "36-50", "51+")
+
+originals <- originals %>% mutate(classFact = as.factor(classification),
+                                  abcFact = as.factor(abcBuckets),
+                                  sexFact = as.factor(sex),
+                                  ageFact = as.factor(age))
+
+ogClassification <- multinom(data = originals, 
+                             formula = classFact ~ abcFact + age + sex) # Angwer
+
+
+test <- predict(ogClassification, data = originals, type = "prob")
+ogTrain <- data.frame(abcFact = unique(originals$abcFact))
+
+test2 <- predict(ogClassification, originals[!duplicated(originals),])
+
+uniqueCombs <- originals[!duplicated(originals),] %>% mutate(
+  modelPred = test2)
+
+# Problem, the model is not making any kind of accurate prediction
+```
+
+```{r model12}
+
+classModel <- glm(data = originals,
+                  formula = reclassification ~ abcFact + sexFact + ageFact, family = "binomial")
+
+
+```
+
+
+```{r model2}
+oneReclass <- glm(data = latest, formula = Reanalyed ~ abcBuckets, family = binomial)
+
+oneReclassConfound <- glm(data = latest, formula = Reanalyed ~ abcBuckets + age + sex, family = binomial)
+
+#make a hit table
+# 
+# oneReclass2 <- glm(data = latest, formula = Reanalyed ~ A + B + C + A:B + B:C + A:C + A:B:C, family = binomial)
+# 
+# oneReclass3 <- glm(data = latest, formula = Reanalyed ~ A + B + C, family = binomial)
+
+anova(oneReclass, test = 'Chisq')
+anova(oneReclassConfound, test = 'Chisq')
+
+CrossTable(latest$abcBuckets, latest$Reanalyed, chisq = TRUE)
+
+
+```
+
+```{r model3}
+
+
+
+```
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
