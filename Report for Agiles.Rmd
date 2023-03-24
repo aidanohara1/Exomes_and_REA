@@ -25,17 +25,13 @@ AGiles <- rename(AGiles,
        abcBuckets = `ABC.REA.buckets`,
        sex = `Sex..reported.at.birth.`,
        age = `Age.Group`,
-       indication = `Indication.Diagnostic.Rate`,
-       reclass = Reclassified,
-       reanaz = Reanalyed)
+       indication = `Indication.Diagnostic.Rate`)
 
 AGiles_OG <- rename(AGiles_OG, 
        abcBuckets = `ABC.REA.buckets`,
        sex = `Sex..reported.at.birth.`,
        age = `Age.Group`,
-       indication = `Indication.Diagnostic.Rate`,
-       reclass = Reclassified,
-       reanaz = Reanalyed)
+       indication = `Indication.Diagnostic.Rate`)
 
 
 # 
@@ -89,19 +85,19 @@ latestAgiles <- group_by(AGiles, `New.study.ID`) %>%
 
 ```{r reclassificationEDAPlots}
 ### RECLASSSIFICATION plot ###
-reclassMeans <- group_by(omitAgiles, abcBuckets) %>%
+reclassMeans <- group_by(latestAgiles, abcBuckets) %>%
   dplyr::summarise(meanReclassification = mean(Reclassified),
             uci_perGroup = CI(Reclassified)['lower'],
             lci_perGroup = CI(Reclassified)['upper']) %>%
   arrange(abcBuckets)
 
-reanazMeans <- group_by(omitAgiles, abcBuckets) %>%
+reanazMeans <- group_by(latestAgiles, abcBuckets) %>%
   dplyr::summarise(meanReanaz = mean(Reanalyed),
                    uci_perGroup = CI(Reanalyed)['lower'],
                    lci_perGroup = CI(Reanalyed)['upper']) %>%
   arrange(abcBuckets)
 
-classMeans <- group_by(omitAgiles, abcBuckets) %>%
+classMeans <- group_by(latestAgiles, abcBuckets) %>%
   dplyr::summarise(meanClassification = mean(classification),
                    uci_perGroup = CI(classification)['lower'],
                    lci_perGroup = CI(classification)['upper']) %>%
