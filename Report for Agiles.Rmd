@@ -147,7 +147,7 @@ latClassGG
 ```
 
 ```{r}
-
+# summary tables
 newOg <- AGiles_OG %>% group_by(abcBuckets, classification) %>%
   summarise(n = n()) %>%
   group_by(abcBuckets) %>% mutate(prob = n / sum(n))
@@ -165,7 +165,7 @@ View(newLatest)
 
 
 
-```{r model1}
+```{r modelexplore1}
 # Does the distribution of original exome outcomes differ by REA? #
 originals <- AGiles_OG
 
@@ -191,7 +191,7 @@ uniqueCombs <- originals[!duplicated(originals),] %>% mutate(
 # Problem, the model is not making any kind of accurate prediction
 ```
 
-```{r model12}
+```{r modelexplore2}
 
 classModel <- glm(data = originals,
                   formula = reclassification ~ abcFact + sexFact + ageFact, family = "binomial")
@@ -200,7 +200,7 @@ classModel <- glm(data = originals,
 ```
 
 
-```{r model2}
+```{r modelexplore3}
 oneReclass <- glm(data = latest, formula = Reanalyed ~ abcBuckets, family = binomial)
 
 oneReclassConfound <- glm(data = latest, formula = Reanalyed ~ abcBuckets + age + sex, family = binomial)
@@ -219,27 +219,76 @@ CrossTable(latest$abcBuckets, latest$Reanalyed, chisq = TRUE)
 
 ```
 
-```{r model3}
+```{r gilesmodel1}
 
 
 
 ```
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r gilesmodel2}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+
 ```
 
-## Including Plots
+```{r gilesmodel3}
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r gilesmodel4}
+
+
+
+```
+
+```{r gilesmodel5}
+
+
+
+```
+
+```{r gilesmodel6}
+
+
+
+```
+
+```{r gilesmodel7}
+
+
+
+```
+
+```{r gilesmodel8}
+
+
+
+```
+
+```{r gilesmodel9}
+
+
+
+```
+
+```{r gilesmodel10}
+
+
+
+```
+
+```{r extra}
+
+
+
+```
+
+```{r extra}
+
+
+
+```
+
+
