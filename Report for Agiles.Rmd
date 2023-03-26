@@ -357,7 +357,7 @@ outcomes62 <- glm(data = uniqueUncertain,
 ```{r gilesmodel7}
 
 trigger7 <- multinom(data = uniqueReanaz, 
-                             formula = `Initiator.of.reanalysis` ~ abcBuckets + age + sex + indication)
+                             formula = `Initiator.of.reanalysis` ~ `Default.REA.buckets` + age + sex + indication)
 
 
 ```
@@ -365,19 +365,22 @@ trigger7 <- multinom(data = uniqueReanaz,
 ```{r gilesmodel8}
 
 evidence8 <- multinom(data = uniqueReclass, 
-                             formula = `Evidence.for.reclassification` ~ abcBuckets + age + sex + indication)
+                             formula = `Evidence.for.reclassification` ~ `Default.REA.buckets` + age + sex + indication)
 
 
 ```
 
 ```{r gilesmodel9}
-
+trigger9 <- multinom(data = uniqueReanaz, 
+                             formula = `Initiator.of.reanalysis` ~ abcBuckets + age + sex + indication)
 
 
 ```
 
 ```{r gilesmodel10}
 
+evidence10 <- multinom(data = uniqueReclass, 
+                             formula = `Evidence.for.reclassification` ~ abcBuckets + age + sex + indication)
 
 
 ```
