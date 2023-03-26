@@ -56,11 +56,79 @@ AGiles_OG <- mutate(AGiles_OG, reclassification = ifelse(`Report.Outcome`=="Posi
 # factorize report outcome again
 AGiles <- mutate(AGiles, reclassification = ifelse(`Report.Outcome`=="Negative",0,1))
 
+latestAgilesGG <- group_by(AGiles, `New.study.ID`) %>%
+  slice(which.max(as.Date(`Report.Date`, '%M/%Y'))) %>%
+  mutate(binReanaz = ifelse(`Original.Latest` != "Original", 1,0))
+
+
+AGiles <- AGiles %>% mutate(across(c(Reanalyed,
+                                     Reclassified,
+                                     Original.Latest,
+                                     Report.Outcome,
+                                     Initiator.of.reanalysis,
+                                     Evidence.for.reclassification,
+                                     Default.REA.buckets,
+                                     abcBuckets,
+                                     sex,
+                                     classification,
+                                     reclassification),
+                                   factor))
+
+AGiles_OG <- AGiles_OG %>% mutate(across(c(Reanalyed,
+                                           Reclassified,
+                                           Original.Latest,
+                                           Report.Outcome,
+                                           Initiator.of.reanalysis,
+                                           Evidence.for.reclassification,
+                                           Default.REA.buckets,
+                                           abcBuckets,
+                                           sex,
+                                           classification,
+                                           reclassification),
+                                         factor))
+
+age_levels <- c("Fetal", "<1", "1-5", "6-10", "11-18", "19-35", "36-50", "51+")
+
+AGiles$age = factor(x = AGiles$age, levels = age_levels, ordered = T)
+AGiles_OG$age = factor(x = AGiles_OG$age, levels = age_levels, ordered = T)
+
 
 # remove repeated observations by keeping only the newest log
 latestAgiles <- group_by(AGiles, `New.study.ID`) %>%
   slice(which.max(as.Date(`Report.Date`, '%M/%Y'))) %>%
   mutate(binReanaz = ifelse(`Original.Latest` != "Original", 1,0))
+
+### Making two separate samples for models that talk about reclassification
+
+# one sample will have every reanalysis event, 
+justReanaz <- AGiles %>% filter(Reanalyed == 1)
+# the other sample will have one reanalysis event, per study id, randomly selected
+set.seed(800)
+
+myList <- split(justReanaz, justReanaz$`New.study.ID`)
+
+uniqueReanaz <- data.table::rbindlist(lapply(myList, 
+                                             function(x) if(nrow(x) > 1) x[sample(nrow(x), 1), ] else x))
+
+
+# Sample of 
+# REA ABC buckets with confounders of  binary is positive vs is uncertain (negatives removed)
+#  cases with reported alterations
+
+posUncertain <- AGiles %>% filter(Reclassified == 1 & classification != -1)
+
+myList2 <- split(posUncertain, posUncertain$`New.study.ID`)
+
+uniqueUncertain <- data.table::rbindlist(lapply(myList2, 
+                                             function(x) if(nrow(x) > 1) x[sample(nrow(x), 1), ] else x))
+
+# Just reclassifications
+
+justReclass <- AGiles %>% filter(Reclassified == 1)
+
+myList3 <- split(justReclass, justReclass$`New.study.ID`)
+uniqueReclass <- data.table::rbindlist(lapply(myList3, 
+                                             function(x) if(nrow(x) > 1) x[sample(nrow(x), 1), ] else x))
 
 
 # Bust this out if you want to remove Original logs of exomes that have been reanalyzed
@@ -78,32 +146,30 @@ latestAgiles <- group_by(AGiles, `New.study.ID`) %>%
 
 
 
-
-
 ```
 
 
 ```{r reclassificationEDAPlots}
 ### RECLASSSIFICATION plot ###
-reclassMeans <- group_by(latestAgiles, abcBuckets) %>%
+reclassMeans <- group_by(latestAgilesGG, abcBuckets) %>%
   dplyr::summarise(meanReclassification = mean(Reclassified),
             uci_perGroup = CI(Reclassified)['lower'],
             lci_perGroup = CI(Reclassified)['upper']) %>%
   arrange(abcBuckets)
 
-reanazMeans <- group_by(latestAgiles, abcBuckets) %>%
+reanazMeans <- group_by(latestAgilesGG, abcBuckets) %>%
   dplyr::summarise(meanReanaz = mean(Reanalyed),
                    uci_perGroup = CI(Reanalyed)['lower'],
                    lci_perGroup = CI(Reanalyed)['upper']) %>%
   arrange(abcBuckets)
 
-classMeans <- group_by(latestAgiles, abcBuckets) %>%
+classMeans <- group_by(latestAgilesGG, abcBuckets) %>%
   dplyr::summarise(meanClassification = mean(classification),
                    uci_perGroup = CI(classification)['lower'],
                    lci_perGroup = CI(classification)['upper']) %>%
   arrange(abcBuckets)
 
-latClassMeans <- group_by(latestAgiles, abcBuckets) %>%
+latClassMeans <- group_by(latestAgilesGG, abcBuckets) %>%
   dplyr::summarise(meanClassification = mean(classification),
                    uci_perGroup = CI(classification)['lower'],
                    lci_perGroup = CI(classification)['upper']) %>%
@@ -148,13 +214,13 @@ newOg <- AGiles_OG %>% group_by(abcBuckets, classification) %>%
   summarise(n = n()) %>%
   group_by(abcBuckets) %>% mutate(prob = n / sum(n))
 
-View(newOg)
+#View(newOg)
 
 newLatest <- latestAgiles %>% group_by(abcBuckets, classification) %>%
   summarise(n = n()) %>%
   group_by(abcBuckets) %>% mutate(prob = n / sum(n)) 
 
-View(newLatest)
+#View(newLatest)
 
 
 ```
@@ -197,9 +263,9 @@ classModel <- glm(data = originals,
 
 
 ```{r modelexplore3}
-oneReclass <- glm(data = latest, formula = Reanalyed ~ abcBuckets, family = binomial)
+oneReclass <- glm(data = latestAgiles, formula = Reanalyed ~ abcBuckets, family = binomial)
 
-oneReclassConfound <- glm(data = latest, formula = Reanalyed ~ abcBuckets + age + sex, family = binomial)
+oneReclassConfound <- glm(data = latestAgiles, formula = Reanalyed ~ abcBuckets + age + sex, family = binomial)
 
 #make a hit table
 # 
@@ -210,7 +276,7 @@ oneReclassConfound <- glm(data = latest, formula = Reanalyed ~ abcBuckets + age 
 anova(oneReclass, test = 'Chisq')
 anova(oneReclassConfound, test = 'Chisq')
 
-CrossTable(latest$abcBuckets, latest$Reanalyed, chisq = TRUE)
+CrossTable(latestAgiles$abcBuckets, latestAgiles$Reanalyed, chisq = TRUE)
 
 
 ```
@@ -227,6 +293,18 @@ CrossTable(latest$abcBuckets, latest$Reanalyed, chisq = TRUE)
 
 ```
 
+```{r reclass model2}
+
+reclass21 <- glm(data = justReanaz, 
+                formula = Reclassified ~ `Default.REA.buckets` + age + sex + indication,
+                family = binomial)
+
+reclass22 <- glm(data = uniqueReanaz, 
+                formula = Reclassified ~ `Default.REA.buckets` + age + sex + indication,
+                family = binomial)
+
+```
+
 ```{r gilesmodel3}
 
 
@@ -239,26 +317,55 @@ CrossTable(latest$abcBuckets, latest$Reanalyed, chisq = TRUE)
 
 ```
 
+```{r}
+
+reclass41 <- glm(data = justReanaz, 
+                formula = Reclassified ~ abcBuckets + age + sex + indication,
+                family = binomial)
+
+reclass42 <- glm(data = uniqueReanaz, 
+                formula = Reclassified ~ abcBuckets + age + sex + indication,
+                family = binomial)
+
+```
+
 ```{r gilesmodel5}
 
+outcomes51 <- glm(data = posUncertain, 
+                formula = classification ~ abcBuckets + age + sex + indication,
+                family = binomial)
+
+outcomes52 <- glm(data = uniqueUncertain, 
+                formula = classification ~ abcBuckets + age + sex + indication,
+                family = binomial)
 
 
 ```
 
 ```{r gilesmodel6}
+outcomes61 <- glm(data = posUncertain, 
+                formula = classification ~ `Default.REA.buckets` + age + sex + indication,
+                family = binomial)
 
+outcomes62 <- glm(data = uniqueUncertain, 
+                formula = classification ~ `Default.REA.buckets` + age + sex + indication,
+                family = binomial)
 
 
 ```
 
 ```{r gilesmodel7}
 
+trigger7 <- multinom(data = uniqueReanaz, 
+                             formula = `Initiator.of.reanalysis` ~ abcBuckets + age + sex + indication)
 
 
 ```
 
 ```{r gilesmodel8}
 
+evidence8 <- multinom(data = uniqueReclass, 
+                             formula = `Evidence.for.reclassification` ~ abcBuckets + age + sex + indication)
 
 
 ```
