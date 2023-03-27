@@ -10,37 +10,35 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-library(Rmisc) # maybe no?
+library(Rmisc) 
 library(dplyr)
 library(gmodels)
 library(ggplot2)
 library(nnet)
 
 # read in
-AGiles <- read.csv("~/Desktop/ma676_featureengineering_automl-Ashleycc1/AGiles.csv")
-AGiles_OG <- read.csv("~/Desktop/ma676_featureengineering_automl-Ashleycc1/AGiles_originalOnly.csv")
+AGiles <- read.csv("AGiles.csv")
+AGiles_OG <- read.csv("AGiles_originalOnly.csv")
 # original reports are already isolated in Agiles_OG
+
+# AGiles <- read.csv("~/Desktop/ma676_featureengineering_automl-Ashleycc1/AGiles.csv")
+# AGiles_OG <- read.csv("~/Desktop/ma676_featureengineering_automl-Ashleycc1/AGiles_originalOnly.csv")
 
 AGiles <- rename(AGiles, 
        abcBuckets = `ABC.REA.buckets`,
        sex = `Sex..reported.at.birth.`,
        age = `Age.Group`,
-       indication = `Indication.Diagnostic.Rate`)
+       indication = `Indication.Diagnostic.Rate`,
+       reanalyzed = Reanalyed)
 
 AGiles_OG <- rename(AGiles_OG, 
        abcBuckets = `ABC.REA.buckets`,
        sex = `Sex..reported.at.birth.`,
        age = `Age.Group`,
-       indication = `Indication.Diagnostic.Rate`)
+       indication = `Indication.Diagnostic.Rate`,
+       reanalyzed = Reanalyed)
 
 
-# 
-# colnames(AGiles)[11] = "abcBuckets"
-# colnames(AGiles_OG)[10] = "abcBuckets"
-# colnames(AGiles)[16] <- "sex"
-# colnames(AGiles)[17] <- "age"
-# colnames(AGiles_OG)[14] <- "sex"
-# colnames(AGiles_OG)[15] <- "age"
 
 AGiles$`Report.Outcome`[AGiles$`Report.Outcome` == "positive"] <- "Positive"
 
@@ -61,7 +59,7 @@ latestAgilesGG <- group_by(AGiles, `New.study.ID`) %>%
   mutate(binReanaz = ifelse(`Original.Latest` != "Original", 1,0))
 
 
-AGiles <- AGiles %>% mutate(across(c(Reanalyed,
+AGiles <- AGiles %>% mutate(across(c(reanalyzed,
                                      Reclassified,
                                      Original.Latest,
                                      Report.Outcome,
@@ -74,7 +72,7 @@ AGiles <- AGiles %>% mutate(across(c(Reanalyed,
                                      reclassification),
                                    factor))
 
-AGiles_OG <- AGiles_OG %>% mutate(across(c(Reanalyed,
+AGiles_OG <- AGiles_OG %>% mutate(across(c(reanalyzed,
                                            Reclassified,
                                            Original.Latest,
                                            Report.Outcome,
@@ -101,7 +99,7 @@ latestAgiles <- group_by(AGiles, `New.study.ID`) %>%
 ### Making two separate samples for models that talk about reclassification
 
 # one sample will have every reanalysis event, 
-justReanaz <- AGiles %>% filter(Reanalyed == 1)
+justReanaz <- AGiles %>% filter(reanalyzed == 1)
 # the other sample will have one reanalysis event, per study id, randomly selected
 set.seed(800)
 
@@ -158,9 +156,9 @@ reclassMeans <- group_by(latestAgilesGG, abcBuckets) %>%
   arrange(abcBuckets)
 
 reanazMeans <- group_by(latestAgilesGG, abcBuckets) %>%
-  dplyr::summarise(meanReanaz = mean(Reanalyed),
-                   uci_perGroup = CI(Reanalyed)['lower'],
-                   lci_perGroup = CI(Reanalyed)['upper']) %>%
+  dplyr::summarise(meanReanaz = mean(reanalyzed),
+                   uci_perGroup = CI(reanalyzed)['lower'],
+                   lci_perGroup = CI(reanalyzed)['upper']) %>%
   arrange(abcBuckets)
 
 classMeans <- group_by(latestAgilesGG, abcBuckets) %>%
@@ -263,9 +261,10 @@ classModel <- glm(data = originals,
 
 
 ```{r modelexplore3}
-oneReclass <- glm(data = latestAgiles, formula = Reanalyed ~ abcBuckets, family = binomial)
+oneReclass <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets, family = binomial)
 
-oneReclassConfound <- glm(data = latestAgiles, formula = Reanalyed ~ abcBuckets + age + sex, family = binomial)
+oneReclassConfound <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + age + sex + indication,
+                          family = binomial)
 
 #make a hit table
 # 
@@ -276,11 +275,15 @@ oneReclassConfound <- glm(data = latestAgiles, formula = Reanalyed ~ abcBuckets 
 anova(oneReclass, test = 'Chisq')
 anova(oneReclassConfound, test = 'Chisq')
 
-CrossTable(latestAgiles$abcBuckets, latestAgiles$Reanalyed, chisq = TRUE)
-<<<<<<< HEAD
-=======
+CrossTable(latestAgiles$abcBuckets, latestAgiles$reanalyzed, 
+           digits = 2,
+           prop.r = T, # row proportion
+           prop.c = F, # column proportion
+           prop.t = F, # table proportion
+           prop.chisq = T, # chi-squared contribution
+           expected = T,
+           resid = T)
 
->>>>>>> b04ff2aecfe8244bd3609451d9e362fe5df7e08d
 
 ```
 
@@ -290,11 +293,16 @@ originals <- mutate(originals, classification = ifelse(`Report.Outcome` == "Posi
                                                                 ifelse(`Report.Outcome` == "Negative", 0, NA))))
 
 
-model1 <- glm(data = originals,formula = classification ~ Default.REA.buckets + sex + age + indication,family = binomial)
+model1.1 <- glm(data = originals,formula = classification ~ Default.REA.buckets + sex + age + indication,family = binomial)
+
+model1.2 <- glm(data = latestAgiles,formula = classification ~ Default.REA.buckets + sex + age + indication,family = binomial)
+
 ```
 
 ```{r gilesmodel2}
-model2 <- glm(data = originals,formula = reclassification ~ Default.REA.buckets + sex + age + indication,family = binomial)
+
+model2 <- glm(data = latestAgiles ,formula = reanalyzed ~ Default.REA.buckets + sex + age + indication,family = binomial)
+
 ```
 
 ```{r reclass model2}
@@ -311,12 +319,16 @@ reclass22 <- glm(data = uniqueReanaz,
 
 ```{r gilesmodel3}
 
+model3.1 <- glm(data = originals,formula = classification ~ abcBuckets + sex + age + indication,family = binomial)
+
+model3.2 <- glm(data = latestAgiles,formula = classification ~ abcBuckets + sex + age + indication,family = binomial)
 
 
 ```
 
 ```{r gilesmodel4}
 
+model4 <- glm(data = latestAgiles ,formula = reanalyzed ~ abcBuckets + sex + age + indication,family = binomial)
 
 
 ```
