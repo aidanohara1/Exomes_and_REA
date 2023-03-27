@@ -17,8 +17,8 @@ library(ggplot2)
 library(nnet)
 
 # read in
-AGiles <- read.csv("AGiles.csv")
-AGiles_OG <- read.csv("AGiles_originalOnly.csv")
+AGiles <- read.csv("~/Desktop/ma676_featureengineering_automl-Ashleycc1/AGiles.csv")
+AGiles_OG <- read.csv("~/Desktop/ma676_featureengineering_automl-Ashleycc1/AGiles_originalOnly.csv")
 # original reports are already isolated in Agiles_OG
 
 AGiles <- rename(AGiles, 
@@ -197,9 +197,9 @@ classModel <- glm(data = originals,
 
 
 ```{r modelexplore3}
-oneReclass <- glm(data = latest, formula = Reanalyed ~ abcBuckets, family = binomial)
+oneReclass <- glm(data = latestAgiles, formula = Reanalyed ~ abcBuckets, family = binomial)
 
-oneReclassConfound <- glm(data = latest, formula = Reanalyed ~ abcBuckets + age + sex, family = binomial)
+oneReclassConfound <- glm(data = latestAgiles, formula = Reanalyed ~ abcBuckets + age + sex, family = binomial)
 
 #make a hit table
 # 
@@ -210,21 +210,21 @@ oneReclassConfound <- glm(data = latest, formula = Reanalyed ~ abcBuckets + age 
 anova(oneReclass, test = 'Chisq')
 anova(oneReclassConfound, test = 'Chisq')
 
-CrossTable(latest$abcBuckets, latest$Reanalyed, chisq = TRUE)
-
+CrossTable(latestAgiles$abcBuckets, latestAgiles$Reanalyed, chisq = TRUE)
 
 ```
 
 ```{r gilesmodel1}
+originals <- mutate(originals, classification = ifelse(`Report.Outcome` == "Positive", 1,
+                                                         ifelse(`Report.Outcome` == "Uncertain", 0,
+                                                                ifelse(`Report.Outcome` == "Negative", 0, NA))))
 
 
-
+model1 <- glm(data = originals,formula = classification ~ Default.REA.buckets + sex + age + indication,family = binomial)
 ```
 
 ```{r gilesmodel2}
-
-
-
+model2 <- glm(data = originals,formula = reclassification ~ Default.REA.buckets + sex + age + indication,family = binomial)
 ```
 
 ```{r gilesmodel3}
