@@ -287,7 +287,13 @@ CrossTable(latestAgiles$abcBuckets, latestAgiles$reanalyzed,
 
 ```
 
+
+REA Default buckets with confounders age/sex/(?indication) by:
 ```{r gilesmodel1}
+# Binary: positive vs is not positive (uncertain and negatives together)
+#                 -at original classification
+#                 -at current classification
+
 originals <- mutate(originals, classification = ifelse(`Report.Outcome` == "Positive", 1,
                                                          ifelse(`Report.Outcome` == "Uncertain", 0,
                                                                 ifelse(`Report.Outcome` == "Negative", 0, NA))))
@@ -300,13 +306,13 @@ model1.2 <- glm(data = latestAgiles,formula = classification ~ Default.REA.bucke
 ```
 
 ```{r gilesmodel2}
-
+#Binary: was reanalyzed vs was not reanalyzed
 model2 <- glm(data = latestAgiles ,formula = reanalyzed ~ Default.REA.buckets + sex + age + indication,family = binomial)
 
 ```
 
 ```{r reclass model2}
-
+#Binary: was reclassified vs was not reclassified
 reclass21 <- glm(data = justReanaz, 
                 formula = Reclassified ~ `Default.REA.buckets` + age + sex + indication,
                 family = binomial)
@@ -317,7 +323,12 @@ reclass22 <- glm(data = uniqueReanaz,
 
 ```
 
+REA ABC buckets with confounders age/sex/(?indication) by:
 ```{r gilesmodel3}
+ # Binary: positive vs is not positive (uncertain and negatives together)
+ #                -at original classification
+ #                -at current classification
+
 model3.1 <- glm(data = originals, formula = classification ~ abcBuckets + sex + age + indication, family = binomial)
 
 model3.2 <- glm(data = latestAgiles, formula = classification ~ abcBuckets + sex + age + indication, family = binomial)
@@ -325,7 +336,7 @@ model3.2 <- glm(data = latestAgiles, formula = classification ~ abcBuckets + sex
 ```
 
 ```{r gilesmodel4}
-
+#Binary: was reanalyzed or was not reanalyzed
 model4 <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + sex + age + indication, family = binomial)
 
 
@@ -333,7 +344,7 @@ model4 <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + sex + age
 ```
 
 ```{r}
-
+#Binary: was reclassified or was not reclassified
 reclass41 <- glm(data = justReanaz, 
                 formula = Reclassified ~ abcBuckets + age + sex + indication,
                 family = binomial)
@@ -345,7 +356,7 @@ reclass42 <- glm(data = uniqueReanaz,
 ```
 
 ```{r gilesmodel5}
-
+#REA ABC buckets with confounders of cases with reported alterations binary is positive vs is uncertain (negatives removed)
 outcomes51 <- glm(data = posUncertain, 
                 formula = classification ~ abcBuckets + age + sex + indication,
                 family = binomial)
@@ -358,6 +369,7 @@ outcomes52 <- glm(data = uniqueUncertain,
 ```
 
 ```{r gilesmodel6}
+#REA Default buckets with confounders of cases with reported alterations binary is positive vs is uncertain (negatives removed)
 outcomes61 <- glm(data = posUncertain, 
                 formula = classification ~ `Default.REA.buckets` + age + sex + indication,
                 family = binomial)
@@ -368,8 +380,12 @@ outcomes62 <- glm(data = uniqueUncertain,
 
 
 ```
+Additional polynomial analysis if there is time. Per our notes, these will need a random intersection score calculation (I think that’s what it was called) to account for the potential multiple reanalysis events in a single individual and randomly select one to be used in this analysis.
 
+REA Default buckets with confounders age/sex/(?indication) by:
 ```{r gilesmodel7}
+# Trigger for reanalysis (Ambry, Provider, Family studies) *This cohort will only include those who have had a reanalysis*
+
 
 trigger7 <- multinom(data = uniqueReanaz, 
                              formula = `Initiator.of.reanalysis` ~ `Default.REA.buckets` + age + sex + indication)
@@ -378,14 +394,17 @@ trigger7 <- multinom(data = uniqueReanaz,
 ```
 
 ```{r gilesmodel8}
-
+# Evidence used for reclassifications (gene, variant, clinical overlap) *This cohort will only include those who have had a reclassification*
 evidence8 <- multinom(data = uniqueReclass, 
                              formula = `Evidence.for.reclassification` ~ `Default.REA.buckets` + age + sex + indication)
 
 
 ```
 
+REA ABC buckets with confounders age/sex/(?indication) by:
 ```{r gilesmodel9}
+# Trigger for reanalysis (Ambry, Provider, Family studies) *This cohort will only include those who have had a reanalysis*
+
 trigger9 <- multinom(data = uniqueReanaz, 
                              formula = `Initiator.of.reanalysis` ~ abcBuckets + age + sex + indication)
 
@@ -393,6 +412,7 @@ trigger9 <- multinom(data = uniqueReanaz,
 ```
 
 ```{r gilesmodel10}
+# Evidence used for reclassifications (gene, variant, clinical overlap) *This cohort will only include those who have had a reclassification*
 
 evidence10 <- multinom(data = uniqueReclass, 
                              formula = `Evidence.for.reclassification` ~ abcBuckets + age + sex + indication)
@@ -402,6 +422,8 @@ evidence10 <- multinom(data = uniqueReclass,
 
 ```{r extra}
 
+# Run the likelihood ratio test #
+# comparison between a model with or without abcbuckets #
 
 
 ```
