@@ -317,20 +317,17 @@ reclass22 <- glm(data = uniqueReanaz,
 
 ```
 
-```{r gilesmodel3 v2}
-model3.1 <- glm(data = originals,formula = classification ~ abcBuckets + sex + age + indication,family = binomial)
+```{r gilesmodel3}
+model3.1 <- glm(data = originals, formula = classification ~ abcBuckets + sex + age + indication, family = binomial)
 
-model3.2 <- glm(data = latestAgiles,formula = classification ~ abcBuckets + sex + age + indication,family = binomial)
-
-model3 <- glm(data = originals,formula = classification ~ abcBuckets + sex + age + indication,family = binomial)
+model3.2 <- glm(data = latestAgiles, formula = classification ~ abcBuckets + sex + age + indication, family = binomial)
 
 ```
 
-```{r gilesmodel4 v2}
+```{r gilesmodel4}
 
-model4 <- glm(data = latestAgiles ,formula = reanalyzed ~ abcBuckets + sex + age + indication,family = binomial)
+model4 <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + sex + age + indication, family = binomial)
 
-model4 <- glm(data = originals,formula = reclassification ~ abcBuckets + sex + age + indication,family = binomial)
 
 
 ```
