@@ -311,13 +311,13 @@ reclass22 <- glm(data = uniqueReanaz,
 
 ```{r gilesmodel3}
 
-
+model3 <- glm(data = originals,formula = classification ~ abcBuckets + sex + age + indication,family = binomial)
 
 ```
 
 ```{r gilesmodel4}
 
-
+model4 <- glm(data = originals,formula = reclassification ~ abcBuckets + sex + age + indication,family = binomial)
 
 ```
 
