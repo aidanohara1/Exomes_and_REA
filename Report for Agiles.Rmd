@@ -431,6 +431,7 @@ trigger7 <- multinom(data = uniqueReanaz,
 
 trigger7.red <- multinom(data = uniqueReanaz, 
                          formula = `Initiator.of.reanalysis` ~ age + sex + indication)
+
 ```
 
 ```{r gilesmodel8}
@@ -547,7 +548,6 @@ lr.evidence8 # fail to reject null
 lr.trigger9 # barely fail to reject null
 
 lr.evidence10 # fail to reject null
-
 
 ```
 
