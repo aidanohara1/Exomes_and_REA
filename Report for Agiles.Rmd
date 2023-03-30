@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r include=FALSE}
 library(Rmisc) 
 library(dplyr)
 library(gmodels)
@@ -147,8 +147,7 @@ uniqueReclass <- data.table::rbindlist(lapply(myList3,
 
 ```
 
-
-```{r reclassificationEDAPlots}
+```{r reclassificationEDAPlots, include=FALSE}
 ### RECLASSSIFICATION plot ###
 reclassMeans <- group_by(latestAgilesGG, abcBuckets) %>%
   dplyr::summarise(meanReclassification = mean(Reclassified),
@@ -207,7 +206,7 @@ classGG
 latClassGG
 ```
 
-```{r}
+```{r include=FALSE}
 # summary tables
 newOg <- AGiles_OG %>% group_by(abcBuckets, classification) %>%
   summarise(n = n()) %>%
@@ -224,9 +223,7 @@ newLatest <- latestAgiles %>% group_by(abcBuckets, classification) %>%
 
 ```
 
-
-
-```{r modelexplore1}
+```{r modelexplore1 include=FALSE}
 # Does the distribution of original exome outcomes differ by REA? #
 originals <- AGiles_OG
 
@@ -241,10 +238,10 @@ ogClassification <- multinom(data = originals,
                              formula = classFact ~ abcFact + age + sex) # Angwer
 
 
-test <- predict(ogClassification, data = originals, type = "prob")
+# test <- predict(ogClassification, data = originals, type = "prob")
 ogTrain <- data.frame(abcFact = unique(originals$abcFact))
 
-test2 <- predict(ogClassification, originals[!duplicated(originals),])
+# test2 <- predict(ogClassification, originals[!duplicated(originals),])
 
 uniqueCombs <- originals[!duplicated(originals),] %>% mutate(
   modelPred = test2)
@@ -252,7 +249,7 @@ uniqueCombs <- originals[!duplicated(originals),] %>% mutate(
 # Problem, the model is not making any kind of accurate prediction
 ```
 
-```{r modelexplore2}
+```{r modelexplore2 include=FALSE}
 
 classModel <- glm(data = originals,
                   formula = reclassification ~ abcFact + sexFact + ageFact, family = "binomial")
@@ -260,8 +257,7 @@ classModel <- glm(data = originals,
 
 ```
 
-
-```{r modelexplore3}
+```{r modelexplore3 include=FALSE}
 oneReclass <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets, family = binomial)
 
 oneReclassConfound <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + age + sex + indication,
@@ -288,9 +284,8 @@ CrossTable(latestAgiles$abcBuckets, latestAgiles$reanalyzed,
 
 ```
 
-
-REA Default buckets with confounders age/sex/(?indication) by:
-```{r gilesmodel1}
+```{r gilesmodel1 include=FALSE}
+# REA Default buckets with confounders age/sex/(?indication) by:
 # Binary: positive vs is not positive (uncertain and negatives together)
 #                 -at original classification
 #                 -at current classification
@@ -307,16 +302,21 @@ model1.1.red <- glm(data = originals,formula = classification ~ sex + age + indi
 model1.2 <- glm(data = latestAgiles,formula = classification ~ Default.REA.buckets + sex + age + indication,family = binomial)
 model1.2.red <- glm(data = latestAgiles,formula = classification ~ sex + age + indication,family = binomial)
 
+nameOfOutput.11 <- "pos vs not pos at original classification, defaults"
+nameOfOutput.12 <- "pos vs not pos at latest classification, defaults"
+
 ```
 
-```{r gilesmodel2}
+```{r gilesmodel2 include=FALSE}
 #Binary: was reanalyzed vs was not reanalyzed
 model2 <- glm(data = latestAgiles ,formula = reanalyzed ~ Default.REA.buckets + sex + age + indication,family = binomial)
 model2.red <- glm(data = latestAgiles ,formula = reanalyzed ~ sex + age + indication,family = binomial)
 
+nameOfOutput.2 <- "R2 or not with latest reports, default"
+
 ```
 
-```{r reclass model2}
+```{r reclassmodel2 include=FALSE}
 #Binary: was reclassified vs was not reclassified
 reclass21 <- glm(data = justReanaz, 
                  formula = Reclassified ~ `Default.REA.buckets` + age + sex + indication,
@@ -333,11 +333,13 @@ reclass21.red <- glm(data = justReanaz,
 reclass22.red <- glm(data = uniqueReanaz, 
                      formula = Reclassified ~ age + sex + indication,
                      family = binomial)
+nameOfOutput.21 <- "reclass vs not with all R2, defaults"
+nameOfOutput.22 <- "reclass vs not with sampled R2, defaults"
 
 ```
 
-REA ABC buckets with confounders age/sex/(?indication) by:
-```{r gilesmodel3}
+```{r gilesmodel3 include=FALSE}
+# REA ABC buckets with confounders age/sex/(?indication) by:
 # Binary: positive vs is not positive (uncertain and negatives together)
 #                -at original classification
 #                -at current classification
@@ -350,18 +352,20 @@ model3.1.red <- glm(data = originals, formula = classification ~ sex + age + ind
 
 model3.2.red <- glm(data = latestAgiles, formula = classification ~ sex + age + indication, family = binomial)
 
+nameOfOutput.31 <- "pos vs not pos at original classification, abc"
+nameOfOutput.32 <- "pos vs not pos at latest classification, abc"
 ```
 
-```{r gilesmodel4}
+```{r gilesmodel4 include=FALSE}
 #Binary: was reanalyzed or was not reanalyzed
 model4 <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + sex + age + indication, family = binomial)
 
 model4.red <- glm(data = latestAgiles, formula = reanalyzed ~ sex + age + indication, family = binomial)
 
-
+nameOfOutput.4 <- "R2 or not with latest reports, abc"
 ```
 
-```{r}
+```{r reclassmodel4 include=FALSE}
 #Binary: was reclassified or was not reclassified
 reclass41 <- glm(data = justReanaz, 
                  formula = Reclassified ~ abcBuckets + age + sex + indication,
@@ -380,9 +384,11 @@ reclass42.red <- glm(data = uniqueReanaz,
                      family = binomial)
 
 
+nameOfOutput.41 <- "reclass vs not with all R2, abc"
+nameOfOutput.42 <- "reclass vs not with sampled R2, abc"
 ```
 
-```{r gilesmodel5}
+```{r gilesmodel5 include=FALSE}
 #REA ABC buckets with confounders of cases with reported alterations binary is positive vs is uncertain (negatives removed)
 outcomes51 <- glm(data = posUncertain, 
                   formula = classification ~ abcBuckets + age + sex + indication,
@@ -400,9 +406,11 @@ outcomes52.red <- glm(data = uniqueUncertain,
                       formula = classification ~ age + sex + indication,
                       family = binomial)
 
+nameOfOutput.51 <- "pos vs unc with all 1/0 reclass, abc"
+nameOfOutput.52 <- "pos vs unc with sampled 1/0 reclass, abc"
 ```
 
-```{r gilesmodel6}
+```{r gilesmodel6 include=FALSE}
 #REA Default buckets with confounders of cases with reported alterations binary is positive vs is uncertain (negatives removed)
 outcomes61 <- glm(data = posUncertain, 
                   formula = classification ~ `Default.REA.buckets` + age + sex + indication,
@@ -419,11 +427,18 @@ outcomes61.red <- glm(data = posUncertain,
 outcomes62.red <- glm(data = uniqueUncertain, 
                       formula = classification ~ age + sex + indication,
                       family = binomial)
-```
-Additional polynomial analysis if there is time. Per our notes, these will need a random intersection score calculation (I think that’s what it was called) to account for the potential multiple reanalysis events in a single individual and randomly select one to be used in this analysis.
 
-REA Default buckets with confounders age/sex/(?indication) by:
-```{r gilesmodel7}
+nameOfOutput.61 <- "pos vs unc with all 1/0 reclass, defaults"
+nameOfOutput.62 <- "pos vs unc with sampled 1/0 reclass, defaults"
+
+```
+
+```{r gilesmodel7 include=FALSE}
+# REA Default buckets with confounders age/sex/(?indication) by:
+
+# Additional polynomial analysis if there is time. Per our notes, these will need a random intersection score 
+#   calculation (I think that’s what it was called) to account for the potential multiple reanalysis events in a single 
+#   individual and randomly select one to be used in this analysis.
 # Trigger for reanalysis (Ambry, Provider, Family studies) *This cohort will only include those who have had a reanalysis*
 
 trigger7 <- multinom(data = uniqueReanaz, 
@@ -432,9 +447,11 @@ trigger7 <- multinom(data = uniqueReanaz,
 trigger7.red <- multinom(data = uniqueReanaz, 
                          formula = `Initiator.of.reanalysis` ~ age + sex + indication)
 
+nameOfOutput.7 <- "initiators with sampled R2, defaults"
+
 ```
 
-```{r gilesmodel8}
+```{r gilesmodel8 include=FALSE}
 # Evidence used for reclassifications (gene, variant, clinical overlap) *This cohort will only include those who have had a reclassification*
 evidence8 <- multinom(data = uniqueReclass, 
                       formula = `Evidence.for.reclassification` ~ `Default.REA.buckets` + age + sex + indication)
@@ -442,11 +459,13 @@ evidence8 <- multinom(data = uniqueReclass,
 evidence8.red <- multinom(data = uniqueReclass, 
                           formula = `Evidence.for.reclassification` ~ age + sex + indication)
 
+nameOfOutput.8 <- "evidence with sampled reclass, defaults"
+
 ```
 
-REA ABC buckets with confounders age/sex/(?indication) by:
-```{r gilesmodel9}
+```{r gilesmodel9 include=FALSE}
 # Trigger for reanalysis (Ambry, Provider, Family studies) *This cohort will only include those who have had a reanalysis*
+# REA ABC buckets with confounders age/sex/(?indication) by:
 
 trigger9 <- multinom(data = uniqueReanaz, 
                      formula = `Initiator.of.reanalysis` ~ abcBuckets + age + sex + indication)
@@ -454,9 +473,11 @@ trigger9 <- multinom(data = uniqueReanaz,
 trigger9.red <- multinom(data = uniqueReanaz, 
                          formula = `Initiator.of.reanalysis` ~ age + sex + indication)
 
+nameOfOutput.9 <- "initiators with sampled R2, abc"
+
 ```
 
-```{r gilesmodel10}
+```{r gilesmodel10 include=FALSE}
 # Evidence used for reclassifications (gene, variant, clinical overlap) *This cohort will only include those who have had a reclassification*
 
 evidence10 <- multinom(data = uniqueReclass, 
@@ -465,9 +486,12 @@ evidence10 <- multinom(data = uniqueReclass,
 evidence10.red <- multinom(data = uniqueReclass, 
                            formula = `Evidence.for.reclassification` ~ age + sex + indication)
 
+nameOfOutput.10 <- "evidence with sampled reclass, abc"
+
+
 ```
 
-```{r extra}
+```{r extra include=FALSE}
 
 # Run the likelihood ratio test #
 # comparison between models with or without abcBuckets or Default REA buckets #
@@ -517,44 +541,199 @@ lr.model1.1 # reject null
 
 lr.model1.2 # reject null
 
-lr.model2 # strongly reject null
+# strongly reject null
+listOfModels <- list(model1.1, # reject null
+                  model1.2, # reject null
+                  model2, # strongly reject null
+                  reclass21, # barely reject null
+                  reclass22, # barely reject null
+                  model3.1, # fail to reject null
+                  model3.2, # reject null
+                  model4, # strongly reject null
+                  reclass41, # barely fail to reject null
+                  reclass42, # barely reject null
+                  outcomes51, # fail to reject null
+                  outcomes52, # fail to reject null
+                  outcomes61, # fail to reject null
+                  outcomes62, # fail to reject null
+                  trigger7, # barely fail to reject null
+                  evidence8, # fail to reject null
+                  trigger9,# barely fail to reject null
+                  evidence10) # fail to reject null
 
-lr.reclass21 # barely reject null
+listOfFormula <- sapply(listOfModels,FUN = function(model)(model$formula))
+listOfFormula[15:18] <- "multinom"
 
-lr.reclass22 # barely reject null
+listOfLRT <- list(lr.model1.1, # reject null
+                  lr.model1.2, # reject null
+                  lr.model2, # strongly reject null
+                  lr.reclass21, # barely reject null
+                  lr.reclass22, # barely reject null
+                  lr.model3.1, # fail to reject null
+                  lr.model3.2, # reject null
+                  lr.model4, # strongly reject null
+                  lr.reclass41, # barely fail to reject null
+                  lr.reclass42, # barely reject null
+                  lr.outcomes51, # fail to reject null
+                  lr.outcomes52, # fail to reject null
+                  lr.outcomes61, # fail to reject null
+                  lr.outcomes62, # fail to reject null
+                  lr.trigger7, # barely fail to reject null
+                  lr.evidence8, # fail to reject null
+                  lr.trigger9,# barely fail to reject null
+                  lr.evidence10) # fail to reject null
 
-lr.model3.1 # fail to reject null
 
-lr.model3.2 # reject null
+listOfChiSqP <- sapply(listOfLRT,FUN = function(lrtmodel)(lrtmodel$`Pr(>Chisq)`[2][1]),simplify = F)
+listOfChiSq <- sapply(listOfLRT,FUN = function(lrtmodel)(lrtmodel$Chisq[2][1]),simplify = F)
 
-lr.model4 # strongly reject null
+listOfLRTnames <- c("lr.model1.1", # reject null
+                          "lr.model1.2", # reject null
+                          "lr.model2", # strongly reject null
+                          "lr.reclass21", # barely reject null
+                          "lr.reclass22", # barely reject null
+                          "lr.model3.1", # fail to reject null
+                          "lr.model3.2", # reject null
+                          "lr.model4", # strongly reject null
+                          "lr.reclass41", # barely fail to reject null
+                          "lr.reclass42", # barely reject null
+                          "lr.outcomes51", # fail to reject null
+                          "lr.outcomes52", # fail to reject null
+                          "lr.outcomes61", # fail to reject null
+                          "lr.outcomes62", # fail to reject null
+                          'lr.trigger7', # barely fail to reject null
+                          'lr.evidence8', # fail to reject null
+                          "lr.trigger9",# barely fail to reject null
+                          "lr.evidence10") # fail to reject null
 
-lr.reclass41 # barely fail to reject null
+listOfModelDesc <- c(nameOfOutput.11,
+                     nameOfOutput.12,
+                     nameOfOutput.2,
+                     nameOfOutput.21,
+                     nameOfOutput.22,
+                     nameOfOutput.31,
+                     nameOfOutput.32,
+                     nameOfOutput.4,
+                     nameOfOutput.41,
+                     nameOfOutput.42,
+                     nameOfOutput.51,
+                     nameOfOutput.52,
+                     nameOfOutput.61,
+                     nameOfOutput.62,
+                     nameOfOutput.7,
+                     nameOfOutput.8,
+                     nameOfOutput.9,
+                     nameOfOutput.10)
 
-lr.reclass42 # barely reject null
+plotFrame <- tibble(names = unlist(listOfLRTnames),
+                    LRTpv = unlist(listOfChiSqP),
+                    formula = unlist(listOfFormula),
+                    desc = listOfModelDesc)
+plotFrame <- arrange(plotFrame, LRTpv)
+modelGroups <- c("default","abc","default",
+                 "default","abc","abc",
+                 "default","default","default",
+                 "abc","abc","abc",
+                 "abc","abc","default",
+                 "default","abc","default")
+plotFrame <- mutate(plotFrame, groupNames = modelGroups)
 
-lr.outcomes51 # fail to reject null
 
-lr.outcomes52 # fail to reject null
+# needs so much fine tuning
+descPlot <- ggplot(plotFrame, aes(x=reorder(desc,LRTpv), y=sort(LRTpv))) +
+  geom_segment(aes(x=reorder(desc,LRTpv), xend=reorder(desc,LRTpv), y=0.05, yend=LRTpv), color="grey") +
+  geom_point(aes(color=groupNames), size=4) +
+  geom_hline(yintercept=0.05, color = "red") +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_text(angle = 75, hjust=1,size = rel(1.05))
+  ) +
+  xlab("") +
+  ylab("LRT p-value")
 
-lr.outcomes61 # fail to reject null
+ggplot(plotFrame, aes(x=reorder(names,LRTpv), y=sort(LRTpv))) +
+  geom_segment(aes(x=reorder(names,LRTpv), xend=reorder(names,LRTpv), y=0.05, yend=LRTpv), color="grey") +
+  geom_point(aes(color=groupNames), size=4) +
+  geom_hline(yintercept=0.05, color = "red") +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_text(angle = 75, hjust=1,size = rel(1.05))
+  ) +
+  xlab("") +
+  ylab("LRT p-value")
 
-lr.outcomes62 # fail to reject null
-
-lr.trigger7 # barely fail to reject null
-
-lr.evidence8 # fail to reject null
-
-lr.trigger9 # barely fail to reject null
-
-lr.evidence10 # fail to reject null
 
 ```
 
-```{r extra}
+```{r extra include=FALSE}
 
+plot(model1.1$residuals)
+plot(model1.1,which=1)
+plot(model4,which=1)
+
+```
+
+```{r listOutputs/dataSets}
+listOfModelDesc
+```
+
+```{r LRTexplanation}
+
+
+# Models, where the null was rejected, indicating that abcBuckets/defaults are significant(?) and should be included
+# Models, failing to reject the null, indicating that abcBuckets/defaults are not significant and the nested model is preferred. Cases where we are not observing significant variation between factors.
 
 
 ```
 
+```{r LRTPvalPlot}
+descPlot
+```
+
+```{r modelsFailReject}
+filter(plotFrame, LRTpv < 0.05)
+```
+
+```{r exp3132v1}
+summary(model3.1)
+```
+
+```{r exp3132v1}
+# needs binned residual
+plot(model3.1,which=1)
+```
+
+```{r exp31322v2}
+summary(model3.2)
+```
+
+```{r exp31322v2}
+plot(model3.2,which=1)
+```
+
+```{r exp4142v1}
+summary(reclass41)
+```
+
+```{r exp4142v1}
+plot(reclass41,which=1)
+```
+
+```{r exp41422v2}
+summary(reclass42)
+```
+
+```{r ex41422v2}
+plot(reclass42,which=1)
+```
+
+```{r summary}
+
+```
 
