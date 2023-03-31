@@ -1,17 +1,18 @@
 ---
 title: "Report for A Giles"
 author: "Aidan O'Hara"
-date: "2023-03-21"
-output: html_document
+date: "2023-03-31"
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r include=FALSE}
+```{r, include=FALSE}
 library(Rmisc) 
 library(dplyr)
+library(tidyr)
 library(gmodels)
 library(ggplot2)
 library(nnet)
@@ -42,6 +43,7 @@ AGiles_OG <- rename(AGiles_OG,
 
 
 AGiles$`Report.Outcome`[AGiles$`Report.Outcome` == "positive"] <- "Positive"
+AGiles$`Initiator.of.reanalysis`[AGiles$`Initiator.of.reanalysis` == "Family Studies"] <- "Family studies"
 
 # factorize report outcome
 AGiles_OG <- mutate(AGiles_OG, classification = ifelse(`Report.Outcome`=="Positive",1,
@@ -86,7 +88,9 @@ AGiles_OG <- AGiles_OG %>% mutate(across(c(reanalyzed,
                                            reclassification),
                                          factor))
 
+#age_levels <- c("Fetal", "1", "5", "10", "18", "35", "50", "51+")
 age_levels <- c("Fetal", "<1", "1-5", "6-10", "11-18", "19-35", "36-50", "51+")
+
 
 AGiles$age = factor(x = AGiles$age, levels = age_levels, ordered = T)
 AGiles_OG$age = factor(x = AGiles_OG$age, levels = age_levels, ordered = T)
@@ -121,8 +125,12 @@ myList2 <- split(posUncertain, posUncertain$`New.study.ID`)
 uniqueUncertain <- data.table::rbindlist(lapply(myList2, 
                                              function(x) if(nrow(x) > 1) x[sample(nrow(x), 1), ] else x))
 
-# Just reclassifications
+# stinky outlier, little baby
+posUncertain <- filter(posUncertain, `New.study.ID` != "AMB_00206")
+uniqueUncertain <- filter(uniqueUncertain, `New.study.ID` != "AMB_00206")
 
+# Just reclassifications
+# check for outliers
 justReclass <- AGiles %>% filter(Reclassified == 1)
 
 myList3 <- split(justReclass, justReclass$`New.study.ID`)
@@ -175,15 +183,17 @@ latClassMeans <- group_by(latestAgilesGG, abcBuckets) %>%
 
 
 reclassGG <- ggplot(reclassMeans) +
-  geom_bar( aes(x=abcBuckets, y=meanReclassification), stat = "identity", alpha = 0.05) +
+  geom_bar( aes(x=abcBuckets, y=meanReclassification), stat = "identity", alpha = 0.5) +
   geom_errorbar( aes(x=abcBuckets, ymin=lci_perGroup, ymax=uci_perGroup, color = abcBuckets), alpha=0.9, size=1)+
   coord_flip()+
+  ylab("mean reclass") +
   theme_dark()
 
 reanazGG <- ggplot(reanazMeans) +
-  geom_bar( aes(x=abcBuckets, y=meanReanaz), stat = "identity", alpha = 0.05) +
+  geom_bar( aes(x=abcBuckets, y=meanReanaz), stat = "identity", alpha = 0.5) +
   geom_errorbar( aes(x=abcBuckets, ymin=lci_perGroup, ymax=uci_perGroup, color = abcBuckets), alpha=0.9, size=1)+
-  coord_flip()+
+  coord_flip() +
+  ylab( "mean R2") +
   theme_dark()
 
 classGG <- ggplot(classMeans) +
@@ -206,7 +216,7 @@ classGG
 latClassGG
 ```
 
-```{r include=FALSE}
+```{r, include=FALSE}
 # summary tables
 newOg <- AGiles_OG %>% group_by(abcBuckets, classification) %>%
   summarise(n = n()) %>%
@@ -223,7 +233,7 @@ newLatest <- latestAgiles %>% group_by(abcBuckets, classification) %>%
 
 ```
 
-```{r modelexplore1 include=FALSE}
+```{r modelexplore1, include=FALSE}
 # Does the distribution of original exome outcomes differ by REA? #
 originals <- AGiles_OG
 
@@ -239,17 +249,17 @@ ogClassification <- multinom(data = originals,
 
 
 # test <- predict(ogClassification, data = originals, type = "prob")
-ogTrain <- data.frame(abcFact = unique(originals$abcFact))
-
-# test2 <- predict(ogClassification, originals[!duplicated(originals),])
-
-uniqueCombs <- originals[!duplicated(originals),] %>% mutate(
-  modelPred = test2)
+# ogTrain <- data.frame(abcFact = unique(originals$abcFact))
+# 
+# # test2 <- predict(ogClassification, originals[!duplicated(originals),])
+# 
+# uniqueCombs <- originals[!duplicated(originals),] %>% mutate(
+#   modelPred = test2)
 
 # Problem, the model is not making any kind of accurate prediction
 ```
 
-```{r modelexplore2 include=FALSE}
+```{r modelexplore2, include=FALSE}
 
 classModel <- glm(data = originals,
                   formula = reclassification ~ abcFact + sexFact + ageFact, family = "binomial")
@@ -257,7 +267,7 @@ classModel <- glm(data = originals,
 
 ```
 
-```{r modelexplore3 include=FALSE}
+```{r modelexplore3, include=FALSE}
 oneReclass <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets, family = binomial)
 
 oneReclassConfound <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + age + sex + indication,
@@ -284,7 +294,7 @@ CrossTable(latestAgiles$abcBuckets, latestAgiles$reanalyzed,
 
 ```
 
-```{r gilesmodel1 include=FALSE}
+```{r gilesmodel1, include=FALSE}
 # REA Default buckets with confounders age/sex/(?indication) by:
 # Binary: positive vs is not positive (uncertain and negatives together)
 #                 -at original classification
@@ -307,7 +317,7 @@ nameOfOutput.12 <- "pos vs not pos at latest classification, defaults"
 
 ```
 
-```{r gilesmodel2 include=FALSE}
+```{r gilesmodel2, include=FALSE}
 #Binary: was reanalyzed vs was not reanalyzed
 model2 <- glm(data = latestAgiles ,formula = reanalyzed ~ Default.REA.buckets + sex + age + indication,family = binomial)
 model2.red <- glm(data = latestAgiles ,formula = reanalyzed ~ sex + age + indication,family = binomial)
@@ -316,7 +326,7 @@ nameOfOutput.2 <- "R2 or not with latest reports, default"
 
 ```
 
-```{r reclassmodel2 include=FALSE}
+```{r reclassmodel2, include=FALSE}
 #Binary: was reclassified vs was not reclassified
 reclass21 <- glm(data = justReanaz, 
                  formula = Reclassified ~ `Default.REA.buckets` + age + sex + indication,
@@ -338,7 +348,7 @@ nameOfOutput.22 <- "reclass vs not with sampled R2, defaults"
 
 ```
 
-```{r gilesmodel3 include=FALSE}
+```{r gilesmodel3, include=FALSE}
 # REA ABC buckets with confounders age/sex/(?indication) by:
 # Binary: positive vs is not positive (uncertain and negatives together)
 #                -at original classification
@@ -356,7 +366,7 @@ nameOfOutput.31 <- "pos vs not pos at original classification, abc"
 nameOfOutput.32 <- "pos vs not pos at latest classification, abc"
 ```
 
-```{r gilesmodel4 include=FALSE}
+```{r gilesmodel4, include=FALSE}
 #Binary: was reanalyzed or was not reanalyzed
 model4 <- glm(data = latestAgiles, formula = reanalyzed ~ abcBuckets + sex + age + indication, family = binomial)
 
@@ -365,7 +375,7 @@ model4.red <- glm(data = latestAgiles, formula = reanalyzed ~ sex + age + indica
 nameOfOutput.4 <- "R2 or not with latest reports, abc"
 ```
 
-```{r reclassmodel4 include=FALSE}
+```{r reclassmodel4, include=FALSE}
 #Binary: was reclassified or was not reclassified
 reclass41 <- glm(data = justReanaz, 
                  formula = Reclassified ~ abcBuckets + age + sex + indication,
@@ -388,7 +398,7 @@ nameOfOutput.41 <- "reclass vs not with all R2, abc"
 nameOfOutput.42 <- "reclass vs not with sampled R2, abc"
 ```
 
-```{r gilesmodel5 include=FALSE}
+```{r gilesmodel5, include=FALSE}
 #REA ABC buckets with confounders of cases with reported alterations binary is positive vs is uncertain (negatives removed)
 outcomes51 <- glm(data = posUncertain, 
                   formula = classification ~ abcBuckets + age + sex + indication,
@@ -410,7 +420,7 @@ nameOfOutput.51 <- "pos vs unc with all 1/0 reclass, abc"
 nameOfOutput.52 <- "pos vs unc with sampled 1/0 reclass, abc"
 ```
 
-```{r gilesmodel6 include=FALSE}
+```{r gilesmodel6, include=FALSE}
 #REA Default buckets with confounders of cases with reported alterations binary is positive vs is uncertain (negatives removed)
 outcomes61 <- glm(data = posUncertain, 
                   formula = classification ~ `Default.REA.buckets` + age + sex + indication,
@@ -433,7 +443,7 @@ nameOfOutput.62 <- "pos vs unc with sampled 1/0 reclass, defaults"
 
 ```
 
-```{r gilesmodel7 include=FALSE}
+```{r gilesmodel7, include=FALSE}
 # REA Default buckets with confounders age/sex/(?indication) by:
 
 # Additional polynomial analysis if there is time. Per our notes, these will need a random intersection score 
@@ -451,7 +461,7 @@ nameOfOutput.7 <- "initiators with sampled R2, defaults"
 
 ```
 
-```{r gilesmodel8 include=FALSE}
+```{r gilesmodel8, include=FALSE}
 # Evidence used for reclassifications (gene, variant, clinical overlap) *This cohort will only include those who have had a reclassification*
 evidence8 <- multinom(data = uniqueReclass, 
                       formula = `Evidence.for.reclassification` ~ `Default.REA.buckets` + age + sex + indication)
@@ -463,7 +473,7 @@ nameOfOutput.8 <- "evidence with sampled reclass, defaults"
 
 ```
 
-```{r gilesmodel9 include=FALSE}
+```{r gilesmodel9, include=FALSE}
 # Trigger for reanalysis (Ambry, Provider, Family studies) *This cohort will only include those who have had a reanalysis*
 # REA ABC buckets with confounders age/sex/(?indication) by:
 
@@ -477,7 +487,7 @@ nameOfOutput.9 <- "initiators with sampled R2, abc"
 
 ```
 
-```{r gilesmodel10 include=FALSE}
+```{r gilesmodel10, include=FALSE}
 # Evidence used for reclassifications (gene, variant, clinical overlap) *This cohort will only include those who have had a reclassification*
 
 evidence10 <- multinom(data = uniqueReclass, 
@@ -491,7 +501,7 @@ nameOfOutput.10 <- "evidence with sampled reclass, abc"
 
 ```
 
-```{r extra include=FALSE}
+```{r extra, include=FALSE}
 
 # Run the likelihood ratio test #
 # comparison between models with or without abcBuckets or Default REA buckets #
@@ -560,6 +570,21 @@ listOfModels <- list(model1.1, # reject null
                   evidence8, # fail to reject null
                   trigger9,# barely fail to reject null
                   evidence10) # fail to reject null
+
+listOfLogModels <- list(model1.1, # reject null
+                  model1.2, # reject null
+                  model2, # strongly reject null
+                  reclass21, # barely reject null
+                  reclass22, # barely reject null
+                  model3.1, # fail to reject null
+                  model3.2, # reject null
+                  model4, # strongly reject null
+                  reclass41, # barely fail to reject null
+                  reclass42, # barely reject null
+                  outcomes51, # fail to reject null
+                  outcomes52, # fail to reject null
+                  outcomes61, # fail to reject null
+                  outcomes62) # fail to reject null
 
 listOfFormula <- sapply(listOfModels,FUN = function(model)(model$formula))
 listOfFormula[15:18] <- "multinom"
@@ -638,7 +663,10 @@ modelGroups <- c("default","abc","default",
                  "default","abc","default")
 plotFrame <- mutate(plotFrame, groupNames = modelGroups)
 
+```
 
+
+```{r plot1, include=FALSE}
 # needs so much fine tuning
 descPlot <- ggplot(plotFrame, aes(x=reorder(desc,LRTpv), y=sort(LRTpv))) +
   geom_segment(aes(x=reorder(desc,LRTpv), xend=reorder(desc,LRTpv), y=0.05, yend=LRTpv), color="grey") +
@@ -654,86 +682,438 @@ descPlot <- ggplot(plotFrame, aes(x=reorder(desc,LRTpv), y=sort(LRTpv))) +
   xlab("") +
   ylab("LRT p-value")
 
-ggplot(plotFrame, aes(x=reorder(names,LRTpv), y=sort(LRTpv))) +
-  geom_segment(aes(x=reorder(names,LRTpv), xend=reorder(names,LRTpv), y=0.05, yend=LRTpv), color="grey") +
-  geom_point(aes(color=groupNames), size=4) +
-  geom_hline(yintercept=0.05, color = "red") +
-  theme_light() +
-  theme(
-    panel.grid.major.x = element_blank(),
-    panel.border = element_blank(),
-    axis.ticks.x = element_blank(),
-    axis.text.x = element_text(angle = 75, hjust=1,size = rel(1.05))
-  ) +
-  xlab("") +
-  ylab("LRT p-value")
+# ggplot(plotFrame, aes(x=reorder(names,LRTpv), y=sort(LRTpv))) +
+#   geom_segment(aes(x=reorder(names,LRTpv), xend=reorder(names,LRTpv), y=0.05, yend=LRTpv), color="grey") +
+#   geom_point(aes(color=groupNames), size=4) +
+#   geom_hline(yintercept=0.05, color = "red") +
+#   theme_light() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.border = element_blank(),
+#     axis.ticks.x = element_blank(),
+#     axis.text.x = element_text(angle = 75, hjust=1,size = rel(1.05))
+#   ) +
+#   xlab("") +
+#   ylab("LRT p-value")
 
 
 ```
 
-```{r extra include=FALSE}
+```{r binnedResid, include = FALSE}
+# needs binned residual
+plot(model3.1,which=1)
+arm::binnedplot(x = predict(model3.1), y = resid(model3.1), 
+           main = paste("Binned residual plot",
+                        deparse(substitute(model3.1))))
 
-plot(model1.1$residuals)
-plot(model1.1,which=1)
-plot(model4,which=1)
+listOfLogModels <- listOfModels[1:14]
+
+sapply(listOfLogModels, FUN = function(model)(
+  arm::binnedplot(x = predict(model), y = resid(model), 
+                  main = paste("Binned residual plot: \n",
+                               c(model$call[1:3]),
+                               "\n",
+                               tail(model$call, 1),
+                               collapse = ' '))),simplify = F)
+
+binnResid <- function(model){
+  arm::binnedplot(x = predict(model), y = resid(model), 
+                  main = paste("Binned residual plot: \n",
+                               c(model$call[1:3]),
+                               "\n",
+                               tail(model$call, 1),
+                               collapse = ' '))
+}
 
 ```
 
-```{r listOutputs/dataSets}
-listOfModelDesc
+```{r exploreInteraction, include = FALSE}
+outcomesINT <- glm(data = uniqueUncertain, 
+                  formula = classification ~ abcBuckets*indication + sex + age ,
+                  family = binomial)
+outcomesINT.red <- glm(data = uniqueUncertain, 
+                  formula = classification ~ sex + age + indication,
+                  family = binomial)
+
+lr.INT <- lrtest(outcomesINT,outcomesINT.red)
+binnResid(outcomesINT)
+binnResid(outcomes52)
+see <- data.frame(uniqueUncertain,predict(outcomesINT))
+
+
 ```
 
-```{r LRTexplanation}
+```{r reportTODO, include = FALSE}
 
-
-# Models, where the null was rejected, indicating that abcBuckets/defaults are significant(?) and should be included
-# Models, failing to reject the null, indicating that abcBuckets/defaults are not significant and the nested model is preferred. Cases where we are not observing significant variation between factors.
-
+# multinomial binned residuals
+# explanation
+# other figures/plots
+# another table?
 
 ```
 
+# EXOMES and REA Model Report
+
+## Study Aims
+
+-   To compare the report outcomes on initial exome reports between REA groups
+-   To compare reclassification rates and outcomes between REA groups
+-   To compare reclassification evidence types used between REA groups
+
+## Proportional Analysis and EDA
+
+```{r propCode, include = FALSE}
+propTableOg <- spread(dplyr::select(newOg,-n),classification, prob)
+propTableOg2 <- spread(dplyr::select(newOg,-prob),classification, n)
+propTable <- spread(dplyr::select(newLatest,-n),classification, prob)
+propTable2 <- spread(dplyr::select(newLatest,-prob),classification, n)
+```
+
+Proportion between REA and classification, original reports
+```{r proportion tables1}
+propTableOg
+```
+
+```{r proportion tables2}
+propTableOg2
+```
+
+Proportion between REA and classification, latest reports
+```{r proportion tables3}
+propTable
+```
+
+```{r proportion tables4}
+propTable2
+```
+
+```{r reanazMean}
+
+reanazGG
+
+```
+
+```{r reclassMean}
+
+reclassGG
+
+```
+
+## Analysis
+
+In order to explore how REA impacts exome reporting, this study will build logistic and multinomial models using abc and default REA buckets as predictors to determine how an exome may be classified, whether an exome is reanalyzed or reclassified, how a reanalysis is initiated, and the evidence used to make a reclassification.  Including sex, age, and indication as possible confounders. 
+
+To statistically evaluate the impact of REA on exome reporting, this study has deployed the likelihood ratio test. 
+The likelihood ratio test, in summary, compares how well two models fit by using the ratio of their likelihoods.
+In this case there is some probability that a given exome will be evaluated in some fashion based on the age, sex, and indication of the patient based on the data.  Calculating the probability of how an exome will be evaluated including the patient REA, the test, assuming a null hypothesis that REA has no effect on exome evaluation, compares the estimated probabilities.  If the test statistic falls below the threshold the null hypothesis is rejected and REA is significant to exome evaluation.
+
+- Models, where the null was rejected (p\<=0.05), indicate that abcBuckets/defaults are significant and should be included 
+- Models, failing to reject the null (p\>0.05), indicate that abcBuckets/defaults are not significant and the simple model is preferred.  These are cases where we are not observing significant variation between REA factors.
+
+Below is a comparison of the constructed models and their likelihood ratio test statistic.  Models below the threshold reject the null hypothesis, indicating REA significance, the others fail to do so.
 ```{r LRTPvalPlot}
 descPlot
 ```
 
+A table describing the models and listing their test statistic.
 ```{r modelsFailReject}
-filter(plotFrame, LRTpv < 0.05)
+plotFrame
 ```
 
-```{r exp3132v1}
+### Model Details
+
+As the purpose of these models is inferential and not predictive, they generally do not deliver meaningful predication.  Models will use the most significant factor of each variable as its (Intercept)/baseline, modifying the estimate accordingly for other factors. The reader can still evaluate the significance of each factor by comparing the magnitude of their estimates, standard error, and p-value.
+
+For example:
+
+```{r exMod, echo=TRUE}
+exMod <- glm(data = originals, formula = classification ~ abcBuckets, family = binomial)
+summary(exMod)
+```
+- (Intercept) here refers to the estimate about abcBucket A, forming the basis for the other estimates which each modify the intercept accordingly.
+- Compare the estimates for abcBucket C and abcBucket B: although the estimate for C is larger than the estimate for B, it has a larger standard error resulting in a higher p-value and a lower significance. A low p-value indicates that the factor is likely non-zero and does explain the result, a high p-value means it is not possible to conclude the factor affects the output in this sample.
+
+Likelihood Ratio Test example:
+
+```{r exLRT}
+exMod <- glm(data = originals, formula = classification ~ indication + abcBuckets, family = binomial)
+exMod.red <- glm(data = originals, formula = classification ~ abcBuckets, family = binomial)
+
+lrtest(exMod,exMod.red)
+```
+This LRT is comparing a model including indication and REA, with the example model from above. The returned `Pr(>Chisq)`(p-value) indicated that the test null hypothesis, indication is not a meaningful predictor, should be rejected.  In this example we prefer the updated model as it more accurately estimates an exome's classification.
+
+Example Binned Residual Plot
+
+```{r}
+binnResid(exMod)
+```
+A binned residual plot splits the data into bins, whereupon the average fitted value in each bin is compared with the bin's average errors. As with most residual plots an adequate model fit should produce random, noisy residuals representative of normal sample noise: The reader should be mindful about interpreting models with residual plots that do not adhere to this chaotic standard.  This could include patterns in residuals, extreme outliers or other orderly aberrations.
+
+### Binary Models
+
+#### `r nameOfOutput.11`
+
+```{r model1.1, echo=TRUE}
+
+summary(model1.1)
+
+```
+
+```{r lr.model1.1, echo=TRUE}
+
+lr.model1.1
+
+```
+
+```{r resid, echo=FALSE}
+
+binnResid(model1.1)
+
+```
+
+#### `r nameOfOutput.12`
+
+```{r model1.2, echo=TRUE}
+
+summary(model1.2)
+
+```
+
+```{r lr.model1.2, echo=TRUE}
+
+lr.model1.2
+
+```
+
+```{r resid2, echo=FALSE}
+
+binnResid(model1.2)
+
+```
+
+#### `r nameOfOutput.31`
+
+```{r model3.1, echo=TRUE}
+
 summary(model3.1)
+
 ```
 
-```{r exp3132v1}
-# needs binned residual
-plot(model3.1,which=1)
+```{r lr.model3.1, echo=TRUE}
+
+lr.model3.1
+
 ```
 
-```{r exp31322v2}
+```{r resid3, echo=FALSE}
+
+binnResid(model3.1)
+
+```
+
+#### `r nameOfOutput.32`
+
+```{r model3.2, echo=TRUE}
+
 summary(model3.2)
+
 ```
 
-```{r exp31322v2}
-plot(model3.2,which=1)
+```{r lr.model3.2, echo=TRUE}
+
+lr.model3.2
+
 ```
 
-```{r exp4142v1}
-summary(reclass41)
+```{r resid4, echo=FALSE}
+
+binnResid(model3.2)
+
 ```
 
-```{r exp4142v1}
-plot(reclass41,which=1)
+#### `r nameOfOutput.2`
+
+```{r model2, echo=TRUE}
+
+summary(model2)
+
 ```
 
-```{r exp41422v2}
+```{r lr.model2, echo=TRUE}
+
+lr.model2
+
+```
+
+```{r resid5, echo=FALSE}
+
+binnResid(model2)
+
+```
+
+#### `r nameOfOutput.4`
+
+```{r model4, echo=TRUE}
+
+summary(model4)
+
+```
+
+```{r lr.model4, echo=TRUE}
+
+lr.model4
+
+```
+
+```{r resid6, echo=FALSE}
+
+binnResid(model4)
+
+```
+
+#### `r nameOfOutput.22`
+
+```{r reclass22, echo=TRUE}
+
+summary(reclass22)
+
+```
+
+```{r lr.reclass22, echo=TRUE}
+
+lr.reclass22
+
+```
+
+```{r resid7, echo=FALSE}
+
+binnResid(reclass22)
+
+```
+
+#### `r nameOfOutput.42`
+
+```{r reclass42, echo=TRUE}
+
 summary(reclass42)
-```
-
-```{r ex41422v2}
-plot(reclass42,which=1)
-```
-
-```{r summary}
 
 ```
+
+```{r lr.reclass42, echo=TRUE}
+
+lr.reclass42
+
+```
+
+```{r resid8, echo=FALSE}
+
+binnResid(reclass42)
+
+```
+
+#### `r nameOfOutput.52`
+
+```{r outcomes52, echo=TRUE}
+
+summary(outcomes52)
+
+```
+
+```{r lr.outcomes52, echo=TRUE}
+
+lr.outcomes52
+
+```
+
+```{r resid9, echo=FALSE}
+
+binnResid(outcomes52)
+
+```
+
+#### `r nameOfOutput.62`
+
+```{r outcomes62, echo=TRUE}
+
+summary(outcomes62)
+
+```
+
+```{r lr.outcomes62, echo=TRUE}
+
+lr.outcomes62
+
+```
+
+```{r resid10, echo=FALSE}
+
+binnResid(outcomes62)
+
+```
+
+### Multinomial Models about Evidence and Initiators
+
+Multinomial models have more than 2 outcome categories.  The result displays coefficient estimates for each predictor for each output category.  In lieu of p-value and standard errors in the model summary the reader is left to evaluate the significance of each estimate via comparison with other estimates.  The LRT output remains consistent and null hypothesis can still be considered.
+
+#### `r nameOfOutput.7`
+
+```{r trigger7, echo=TRUE}
+
+summary(trigger7)
+
+```
+
+```{r lr.trigger7, echo=TRUE}
+
+lr.trigger7
+
+```
+
+#### `r nameOfOutput.9`
+
+```{r trigger9, echo=TRUE}
+
+summary(trigger9)
+
+```
+
+```{r lr.trigger9, echo=TRUE}
+
+lr.trigger9
+
+```
+
+#### `r nameOfOutput.8`
+
+```{r evidence8, echo=TRUE}
+
+summary(evidence8)
+
+```
+
+```{r lr.evidence8, echo=TRUE}
+
+lr.evidence8
+
+```
+
+#### `r nameOfOutput.10`
+
+```{r evidence10, echo=TRUE}
+
+summary(evidence10)
+
+```
+
+```{r lr.evidence10, echo=TRUE}
+
+lr.evidence10
+
+```
+
+
+### Notes
+Additional analysis might consider the interaction between indication and REA, some testing showed REA significance increase when indication was interacted with.
+The author is working out how to generate binned residual plots about multinomial models. Those will be available for consideration in the final report. 
 
