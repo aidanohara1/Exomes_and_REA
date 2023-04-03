@@ -1125,10 +1125,13 @@ The author is working out how to generate binned residual plots about multinomia
 #  questions about the models,
 #    and more
 
+<<<<<<< HEAD
 # 1) could we run a fischer test comparing individual buckets to the other ones?
 # 2) signifiy which buckets matter/ which buckets matter more/less?
 # 3) Can we compare stat significance between groups B anbd C 
 # 4) 
+
+>>>>>>> f61b43cc75ba6d90afb45e23cce9810b5b1e0a45
 
 
 ```
