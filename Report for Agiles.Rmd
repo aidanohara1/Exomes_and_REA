@@ -219,6 +219,69 @@ classGG
 latClassGG
 ```
 
+```{r reclassificationEDAPlotsDEFAULTS, include=FALSE}
+### RECLASSSIFICATION plot ###
+reclassMeansDef <- group_by(latestAgilesGG, `Default.REA.buckets`) %>%
+  dplyr::summarise(meanReclassification = mean(Reclassified),
+            uci_perGroup = CI(Reclassified)['lower'],
+            lci_perGroup = CI(Reclassified)['upper']) %>%
+  arrange(meanReclassification)
+
+reanazMeansDef <- group_by(latestAgilesGG, `Default.REA.buckets`) %>%
+  dplyr::summarise(meanReanaz = mean(reanalyzed),
+                   uci_perGroup = CI(reanalyzed)['lower'],
+                   lci_perGroup = CI(reanalyzed)['upper']) %>%
+  arrange(meanReanaz)
+
+classMeansDef <- group_by(latestAgilesGG, `Default.REA.buckets`) %>%
+  dplyr::summarise(meanClassification = mean(classification),
+                   uci_perGroup = CI(classification)['lower'],
+                   lci_perGroup = CI(classification)['upper']) %>%
+  arrange(meanClassification)
+
+latClassMeansDef <- group_by(latestAgilesGG, `Default.REA.buckets`) %>%
+  dplyr::summarise(meanClassification = mean(classification),
+                   uci_perGroup = CI(classification)['lower'],
+                   lci_perGroup = CI(classification)['upper']) %>%
+  arrange(meanClassification)
+
+
+reclassGGDef <- ggplot(reclassMeansDef) +
+  geom_bar( aes(x=`Default.REA.buckets`, y=meanReclassification), stat = "identity", alpha = 0.5) +
+  geom_errorbar( aes(x=`Default.REA.buckets`, ymin=lci_perGroup, ymax=uci_perGroup, color = `Default.REA.buckets`), alpha=0.9, size=1)+
+  coord_flip()+
+  ylab("mean reclass") +
+  theme_dark()
+
+reanazGGDef <- ggplot(reanazMeansDef) +
+  geom_bar( aes(x=`Default.REA.buckets`, y=meanReanaz), stat = "identity", alpha = 0.5) +
+  geom_errorbar( aes(x=`Default.REA.buckets`,
+                     ymin=lci_perGroup, ymax=uci_perGroup, 
+                     color = `Default.REA.buckets`), alpha=0.9, size=1)+
+  coord_flip() +
+  ylab( "mean R2") +
+  theme_dark()
+
+classGGDef <- ggplot(classMeansDef) +
+  geom_bar( aes(x=`Default.REA.buckets`, y=meanClassification), stat = "identity", alpha = 0.9) +
+  geom_errorbar( aes(x=`Default.REA.buckets`, ymin=lci_perGroup, ymax=uci_perGroup, color = `Default.REA.buckets`), alpha=0.9, size=1)+
+  ggtitle("Cumulative classifications") +
+  coord_flip()+
+  theme_dark()
+
+latClassGGDef <- ggplot(latClassMeansDef) +
+  geom_bar( aes(x=`Default.REA.buckets`, y=meanClassification), stat = "identity", alpha = 0.9) +
+  geom_errorbar( aes(x=`Default.REA.buckets`, ymin=lci_perGroup, ymax=uci_perGroup, color = `Default.REA.buckets`), alpha=0.9, size=1)+
+  ggtitle("Up to Date classifications") +
+  coord_flip()+
+  theme_dark()
+
+reclassGGDef
+reanazGGDef
+classGGDef
+latClassGGDef
+```
+
 ```{r, include=FALSE}
 # summary tables
 newOg <- AGiles_OG %>% group_by(abcBuckets, classification) %>%
@@ -800,6 +863,14 @@ reanazGG
 
 reclassGG
 
+```
+
+```{r reanazMeanDef}
+reanazGGDef
+```
+
+```{r reclassMeansDef}
+reanazGGDef
 ```
 
 ## Analysis
