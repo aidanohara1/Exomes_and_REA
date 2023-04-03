@@ -88,12 +88,15 @@ AGiles_OG <- AGiles_OG %>% mutate(across(c(reanalyzed,
                                            reclassification),
                                          factor))
 
-#age_levels <- c("Fetal", "1", "5", "10", "18", "35", "50", "51+")
+betterLevels <- c("A", "B", "C", "D", "E", "F", "G", "H")
 age_levels <- c("Fetal", "<1", "1-5", "6-10", "11-18", "19-35", "36-50", "51+")
 
 
 AGiles$age = factor(x = AGiles$age, levels = age_levels, ordered = T)
 AGiles_OG$age = factor(x = AGiles_OG$age, levels = age_levels, ordered = T)
+# 
+# levels(AGiles$age) <- betterLevels
+# levels(AGiles_OG$age) <- betterLevels
 
 
 # remove repeated observations by keeping only the newest log
@@ -237,15 +240,15 @@ newLatest <- latestAgiles %>% group_by(abcBuckets, classification) %>%
 # Does the distribution of original exome outcomes differ by REA? #
 originals <- AGiles_OG
 
-age_levels <- c("Fetal", "<1", "1-5", "6-10", "11-18", "19-35", "36-50", "51+")
+#age_levels <- c("Fetal", "<1", "1-5", "6-10", "11-18", "19-35", "36-50", "51+")
 
-originals <- originals %>% mutate(classFact = as.factor(classification),
-                                  abcFact = as.factor(abcBuckets),
-                                  sexFact = as.factor(sex),
-                                  ageFact = as.factor(age))
-
-ogClassification <- multinom(data = originals, 
-                             formula = classFact ~ abcFact + age + sex) # Angwer
+#originals <- originals %>% mutate(classFact = as.factor(classification),
+                                  # abcFact = as.factor(abcBuckets),
+                                  # sexFact = as.factor(sex),
+                                  # ageFact = as.factor(age))
+# 
+# ogClassification <- multinom(data = originals, 
+#                              formula = classification ~ abcBuckets + age + sex) # Angwer
 
 
 # test <- predict(ogClassification, data = originals, type = "prob")
@@ -262,7 +265,7 @@ ogClassification <- multinom(data = originals,
 ```{r modelexplore2, include=FALSE}
 
 classModel <- glm(data = originals,
-                  formula = reclassification ~ abcFact + sexFact + ageFact, family = "binomial")
+                  formula = reclassification ~ abcBuckets + sex + age, family = "binomial")
 
 
 ```
@@ -1117,3 +1120,15 @@ lr.evidence10
 Additional analysis might consider the interaction between indication and REA, some testing showed REA significance increase when indication was interacted with.
 The author is working out how to generate binned residual plots about multinomial models. Those will be available for consideration in the final report. 
 
+```{r include = FALSE}
+# notes about what to do,
+#  questions about the models,
+#    and more
+
+1) could we run a fischer test comparing individual buckets to the other ones?
+2) signifiy which buckets matter/ which buckets matter more/less?
+3) Can we compare between groups B anbd ChickWeight
+4) 
+
+
+```
