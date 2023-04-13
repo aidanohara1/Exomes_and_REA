@@ -5,7 +5,7 @@ date: "2023-03-31"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, warning=FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -45,6 +45,7 @@ AGiles_OG <- rename(AGiles_OG,
 AGiles$`Report.Outcome`[AGiles$`Report.Outcome` == "positive"] <- "Positive"
 AGiles$`Initiator.of.reanalysis`[AGiles$`Initiator.of.reanalysis` == "Family Studies"] <- "Family studies"
 
+
 # factorize report outcome
 AGiles_OG <- mutate(AGiles_OG, classification = ifelse(`Report.Outcome`=="Positive",1,
                                                        ifelse(`Report.Outcome`=="Uncertain",0,-1)))
@@ -57,9 +58,12 @@ AGiles_OG <- mutate(AGiles_OG, reclassification = ifelse(`Report.Outcome`=="Posi
 # factorize report outcome again
 AGiles <- mutate(AGiles, reclassification = ifelse(`Report.Outcome`=="Negative",0,1))
 
+
 latestAgilesGG <- group_by(AGiles, `New.study.ID`) %>%
   slice(which.max(as.Date(`Report.Date`, '%M/%Y'))) %>%
   mutate(binReanaz = ifelse(`Original.Latest` != "Original", 1,0))
+
+
 
 
 AGiles <- AGiles %>% mutate(across(c(reanalyzed,
@@ -88,15 +92,32 @@ AGiles_OG <- AGiles_OG %>% mutate(across(c(reanalyzed,
                                            reclassification),
                                          factor))
 
+
 betterLevels <- c("A", "B", "C", "D", "E", "F", "G", "H")
 age_levels <- c("Fetal", "<1", "1-5", "6-10", "11-18", "19-35", "36-50", "51+")
 
+# 
+# AGiles$age = factor(x = AGiles$age, levels = age_levels, ordered = T)
+# AGiles_OG$age = factor(x = AGiles_OG$age, levels = age_levels, ordered = T)
 
-AGiles$age = factor(x = AGiles$age, levels = age_levels, ordered = T)
-AGiles_OG$age = factor(x = AGiles_OG$age, levels = age_levels, ordered = T)
+
+AGiles$age = factor(x = AGiles$age, levels = age_levels, ordered = F)
+AGiles_OG$age = factor(x = AGiles_OG$age, levels = age_levels, ordered = F)
 # 
 # levels(AGiles$age) <- betterLevels
-# levels(AGiles_OG$age) <- betterLevels
+# # levels(AGiles_OG$age) <- betterLevels
+# contrasts(AGiles$age) <- contr.treatment(8)
+# contrasts(AGiles_OG$age) <- contr.treatment(8)
+
+
+countOfDef <- AGiles %>% group_by(`Default.REA.buckets`) %>%
+  tally() %>%
+  arrange(-n)
+
+AGiles$`Default.REA.buckets` <- factor(AGiles$`Default.REA.buckets`, countOfDef$Default.REA.buckets)
+AGiles_OG$`Default.REA.buckets` <- factor(AGiles_OG$`Default.REA.buckets`,
+                                          countOfDef$Default.REA.buckets)
+
 
 
 # remove repeated observations by keeping only the newest log
@@ -723,8 +744,8 @@ plotFrame <- tibble(names = unlist(listOfLRTnames),
 plotFrame <- arrange(plotFrame, LRTpv)
 modelGroups <- c("default","abc","default",
                  "default","abc","abc",
-                 "default","default","default",
-                 "abc","abc","abc",
+                 "default","default","abc",
+                 "default","abc","abc",
                  "abc","abc","default",
                  "default","abc","default")
 plotFrame <- mutate(plotFrame, groupNames = modelGroups)
@@ -748,25 +769,27 @@ descPlot <- ggplot(plotFrame, aes(x=reorder(desc,LRTpv), y=sort(LRTpv))) +
   xlab("") +
   ylab("LRT p-value")
 
-# ggplot(plotFrame, aes(x=reorder(names,LRTpv), y=sort(LRTpv))) +
-#   geom_segment(aes(x=reorder(names,LRTpv), xend=reorder(names,LRTpv), y=0.05, yend=LRTpv), color="grey") +
-#   geom_point(aes(color=groupNames), size=4) +
-#   geom_hline(yintercept=0.05, color = "red") +
-#   theme_light() +
-#   theme(
-#     panel.grid.major.x = element_blank(),
-#     panel.border = element_blank(),
-#     axis.ticks.x = element_blank(),
-#     axis.text.x = element_text(angle = 75, hjust=1,size = rel(1.05))
-#   ) +
-#   xlab("") +
-#   ylab("LRT p-value")
+ggplot(plotFrame, aes(x=reorder(names,LRTpv), y=sort(LRTpv))) +
+  geom_segment(aes(x=reorder(names,LRTpv), xend=reorder(names,LRTpv), y=0.05, yend=LRTpv), color="grey") +
+  geom_point(aes(color=groupNames), size=4) +
+  geom_hline(yintercept=0.05, color = "red") +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_text(angle = 75, hjust=1,size = rel(1.05))
+  ) +
+  xlab("") +
+  ylab("LRT p-value")
 
 
 ```
 
 ```{r binnedResid, include = FALSE}
 # needs binned residual
+#binnedplot(fitted(ball3), resid(ball3,type="response"))
+
 plot(model3.1,which=1)
 arm::binnedplot(x = predict(model3.1), y = resid(model3.1), 
            main = paste("Binned residual plot",
@@ -783,7 +806,7 @@ sapply(listOfLogModels, FUN = function(model)(
                                collapse = ' '))),simplify = F)
 
 binnResid <- function(model){
-  arm::binnedplot(x = predict(model), y = resid(model), 
+  arm::binnedplot(x = predict(model), y = resid(model,type = "response"), 
                   main = paste("Binned residual plot: \n",
                                c(model$call[1:3]),
                                "\n",
@@ -808,6 +831,42 @@ see <- data.frame(uniqueUncertain,predict(outcomesINT))
 
 
 ```
+
+
+```{r anotherattempt, include = FALSE}
+library(sjPlot)
+
+listOfTerms <- c("Default.REA.bucketsHispanic / Latino",
+                 "Default.REA.bucketsMultiracial",
+                 "Default.REA.bucketsAfrican American / Black",
+                 "Default.REA.bucketsAsian",
+                 "Default.REA.bucketsN/A",
+                 "Default.REA.bucketsAshkenazi Jewish",
+                 "Default.REA.bucketsOther")
+
+listOfLabels <- c("Hispanic / Latino",
+                 "Multiracial",
+                 "African American / Black",
+                 "Asian",
+                 "N/A",
+                 "Ashkenazi Jewish",
+                 "Other")
+
+names(listOfLabels) = listOfTerms
+
+plot_model(model1.1,
+           terms = listOfTerms,
+           sort.est = T,
+           vline.color = "red",
+           show.values = T,
+           value.offset = .3,
+           title = "model1.1 classification",
+           axis.labels = listOfLabels)
+
+```
+
+
+
 
 ```{r reportTODO, include = FALSE}
 
@@ -946,6 +1005,20 @@ binnResid(model1.1)
 
 ```
 
+```{r model1OddsRatio, echo=FALSE, message=FALSE, results='hide'}
+
+model1OR <- plot_model(model1.1,
+           terms = listOfTerms,
+           sort.est = T,
+           vline.color = "red",
+           show.values = T,
+           value.offset = .3,
+           title = "model1.1 classification",
+           axis.labels = listOfLabels)
+
+suppressWarnings(print(model1OR))
+
+```
 #### `r nameOfOutput.12`
 
 ```{r model1.2, echo=TRUE}
@@ -963,6 +1036,21 @@ lr.model1.2
 ```{r resid2, echo=FALSE}
 
 binnResid(model1.2)
+
+```
+
+```{r model12OddsRatio, echo=FALSE, message=FALSE, results='hide'}
+
+model12OR <- plot_model(model1.2,
+           terms = listOfTerms,
+           sort.est = T,
+           vline.color = "red",
+           show.values = T,
+           value.offset = .3,
+           title = "latest reanalysis",
+           axis.labels = listOfLabels)
+
+suppressWarnings(print(reclassOR))
 
 ```
 
@@ -1012,6 +1100,8 @@ binnResid(model3.2)
 
 summary(model2)
 
+
+
 ```
 
 ```{r lr.model2, echo=TRUE}
@@ -1026,6 +1116,19 @@ binnResid(model2)
 
 ```
 
+```{r model2OddsRatio, echo=FALSE, message=FALSE, results='hide'}
+
+model2OR <- plot_model(model2,
+           terms = listOfTerms,
+           sort.est = T,
+           vline.color = "red",
+           show.values = T,
+           value.offset = .3,
+           title = "model2 reanalysis",
+           axis.labels = listOfLabels)
+
+suppressWarnings(print(model2OR))
+```
 #### `r nameOfOutput.4`
 
 ```{r model4, echo=TRUE}
@@ -1064,6 +1167,20 @@ lr.reclass22
 
 binnResid(reclass22)
 
+```
+
+```{r model22OddsRatio, echo=FALSE, message=FALSE, results='hide'}
+
+reclassOR <- plot_model(reclass22,
+           terms = listOfTerms,
+           sort.est = T,
+           vline.color = "red",
+           show.values = T,
+           value.offset = .3,
+           title = "reclass22 reclassification",
+           axis.labels = listOfLabels)
+
+suppressWarnings(print(reclassOR))
 ```
 
 #### `r nameOfOutput.42`
@@ -1124,6 +1241,20 @@ lr.outcomes62
 
 binnResid(outcomes62)
 
+```
+
+```{r outcomes62OddsRatio, message=FALSE, results='hide'}
+outcomeOR <- plot_model(outcomes62,
+           terms = listOfTerms,
+           sort.est = T,
+           vline.color = "red",
+           show.values = T,
+           value.offset = .3,
+           title = "outcome62 classification",
+           axis.labels = listOfLabels)
+           #transform = "plogis")
+
+suppressWarnings(print(outcomeOR))
 ```
 
 ### Multinomial Models about Evidence and Initiators
@@ -1187,6 +1318,110 @@ lr.evidence10
 ```
 
 
+
+```{r effectsVisualization, include = FALSE, eval = FALSE}
+library(effects)
+
+plot(allEffects(model3.1))
+plot(predictorEffect("abcBuckets", model3.1))
+summary(model3.1)
+
+abcEffect <- predictorEffect("abcBuckets", model3.1)
+
+# https://cran.r-project.org/web/packages/effects/vignettes/predictor-effects-gallery.pdf
+or <- order(as.data.frame(abcEffect)$fit) # order smallest to largest
+originals$abcBuckets2 <- factor(originals$abcBuckets, # reorder levels of spp
+  levels=levels(originals$abcBuckets)[or])
+model3.1.effect <- update(model3.1, ~ . - abcBuckets + abcBuckets2) # refit model
+plot(predictorEffects(model3.1.effect, ~ abcBuckets2), main="type='response', ordered",
+  axes=list(y=list(type="response",
+  lab="probabilty scale, probability labels"),
+  x=list(rotate=30, spp=list(lab="abc Buckets")),
+  grid=TRUE))
+
+defEffect <- predictorEffect("Default.REA.buckets", model1.1)
+
+# https://cran.r-project.org/web/packages/effects/vignettes/predictor-effects-gallery.pdf
+or <- order(as.data.frame(defEffect)$fit) # order smallest to largest
+originals$def2 <- factor(originals$`Default.REA.buckets`, # reorder levels of spp
+  levels=levels(originals$`Default.REA.buckets`)[or])
+model1.1.effect <- update(model1.1, ~ . - `Default.REA.buckets` + def2) # refit model
+plot(predictorEffects(model1.1.effect, ~ def2), main="type='response', ordered",
+  axes=list(y=list(type="response",
+  lab="probabilty scale, probability labels"),
+  x=list(rotate=30, spp=list(lab="default Buckets")),
+  grid=TRUE))
+
+
+# plotOrderedEffects <- function(model,eff.str){
+#   abcEffect <- predictorEffect(eff.str, model)
+# 
+# # https://cran.r-project.org/web/packages/effects/vignettes/predictor-effects-gallery.pdf
+# or <- order(as.data.frame(abcEffect)$fit) # order smallest to largest
+# # how do you specify to use a cusotom predictor selector...?
+# model$data$newEff <- factor(model$data$eff.str, # reorder levels of spp
+#   levels=levels(model$data$eff.str)[or])
+# model.effect <- update(model, ~ . - as.name(eff.str) + newEff) # refit model
+# plot(predictorEffects(model.effect, ~ newEff), main="type='response', ordered",
+#   axes=list(y=list(type="response",
+#   lab="probabilty scale, probability labels"),
+#   x=list(rotate=30, spp=list(lab="abc Buckets")),
+#   grid=TRUE))
+#   
+# }
+# 
+# plotOrderedEffects(model1.1,"Default.REA.buckets")
+
+```
+
+
+
+```{r usingChatGPT, eval=FALSE, include=FALSE}
+plotOdds <- function(model) {
+  
+# extract the coefficients and their standard errors
+coef <- coef(model)
+se <- summary(model)$coef[, 2]
+
+# calculate the odds ratios and their confidence intervals
+odds_ratio <- exp(coef)
+ci_low <- exp(coef - 1.96 * se)
+ci_high <- exp(coef + 1.96 * se)
+
+# plot the odds ratios with confidence intervals
+plot(coef, exp(coef), pch = 19, xlim = c(-1, 1), ylim = c(0, 5))
+arrows(x0 = coef, y0 = ci_low, x1 = coef, y1 = ci_high, length = 0.05, angle = 90, code = 3)
+abline(h = 1, lty = 2)
+axis(1, at = coef, labels = names(coef))
+
+}
+
+plotOdds(model1.1)
+
+plot(predictorEffect("abcBuckets", model3.1), scales = list(x = list(at = 1:8, labels = 1:8)), 
+     ylab = "Odds Ratio", ylim = c(0, 5), main = "Effects of x on the response variable")
+
+# create a dataset for logistic regression
+plotOdds2 <- function(model, var){
+# create a dataframe with odds ratios and confidence intervals for the categorical variable
+coef_df <- data.frame(coef = names(coef(model)),
+                      odds_ratio = exp(coef(model)),
+                      ci_low = exp(confint.default(model)[,1]),
+                      ci_high = exp(confint.default(model)[,2]))
+
+# filter the dataframe to include only the odds ratio for one category
+coef_df <- coef_df[coef_df$coef == var,]
+
+# plot the odds ratio with confidence intervals
+ggplot(coef_df, aes(x = coef, y = odds_ratio)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0.2) +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  ylab("Odds Ratio") +
+  ggtitle(paste("Odds Ratio for Category",var))
+}
+```
+
 ### Notes
 Additional analysis might consider the interaction between indication and REA, some testing showed REA significance increase when indication was interacted with.
 The author is working out how to generate binned residual plots about multinomial models. Those will be available for consideration in the final report. 
@@ -1201,6 +1436,8 @@ The author is working out how to generate binned residual plots about multinomia
 # 3) Can we compare stat significance between groups B anbd C 
 # 4) 
 
-
+# odds ratios
+# fisher exact test assumption
+# 
 
 ```
