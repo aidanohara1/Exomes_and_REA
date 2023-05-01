@@ -844,11 +844,11 @@ listOfTerms <- c("Default.REA.bucketsHispanic / Latino",
                  "Default.REA.bucketsAshkenazi Jewish",
                  "Default.REA.bucketsOther")
 
-listOfLabels <- c("Hispanic / Latino",
+listOfLabels <- c("Hispanic and Latino",
                  "Multiracial",
-                 "African American / Black",
+                 "African American and Black",
                  "Asian",
-                 "N/A",
+                 "Not Provided",
                  "Ashkenazi Jewish",
                  "Other")
 
@@ -861,7 +861,8 @@ plot_model(model1.1,
            show.values = T,
            value.offset = .3,
            title = "model1.1 classification",
-           axis.labels = listOfLabels)
+           axis.labels = listOfLabels,
+           axis.lim = c(0.75,3))
 
 ```
 
@@ -1013,8 +1014,9 @@ model1OR <- plot_model(model1.1,
            vline.color = "red",
            show.values = T,
            value.offset = .3,
-           title = "model1.1 classification",
-           axis.labels = listOfLabels)
+           title = "B",
+           axis.labels = listOfLabels,
+           axis.lim = c(0.75,3))
 
 suppressWarnings(print(model1OR))
 
@@ -1047,10 +1049,11 @@ model12OR <- plot_model(model1.2,
            vline.color = "red",
            show.values = T,
            value.offset = .3,
-           title = "latest reanalysis",
-           axis.labels = listOfLabels)
+           title = "C",
+           axis.labels = listOfLabels,
+           axis.lim = c(0.75,3))
 
-suppressWarnings(print(reclassOR))
+suppressWarnings(print(model12OR))
 
 ```
 
@@ -1124,8 +1127,9 @@ model2OR <- plot_model(model2,
            vline.color = "red",
            show.values = T,
            value.offset = .3,
-           title = "model2 reanalysis",
-           axis.labels = listOfLabels)
+           title = "B",
+           axis.labels = listOfLabels,
+           axis.lim = c(0.75,3))
 
 suppressWarnings(print(model2OR))
 ```
@@ -1177,8 +1181,9 @@ reclassOR <- plot_model(reclass22,
            vline.color = "red",
            show.values = T,
            value.offset = .3,
-           title = "reclass22 reclassification",
-           axis.labels = listOfLabels)
+           title = "B",
+           axis.labels = listOfLabels,
+           axis.lim = c(0.75,3))
 
 suppressWarnings(print(reclassOR))
 ```
@@ -1251,7 +1256,8 @@ outcomeOR <- plot_model(outcomes62,
            show.values = T,
            value.offset = .3,
            title = "outcome62 classification",
-           axis.labels = listOfLabels)
+           axis.labels = listOfLabels,
+           axis.lim = c(0.75,3))
            #transform = "plogis")
 
 suppressWarnings(print(outcomeOR))
@@ -1439,5 +1445,39 @@ The author is working out how to generate binned residual plots about multinomia
 # odds ratios
 # fisher exact test assumption
 # 
+
+```
+
+
+```{r include = FALSE}
+# model1.1 model1.2 model2 reclass22
+
+# export the plot to a .png file
+png(file = "ORmodel11.png", width = 800, height = 600, res = 150)
+
+print(model1OR)
+# save the plot
+dev.off()
+
+# export the plot to a .png file
+png(file = "ORmodel12.png", width = 800, height = 600, res = 150)
+
+print(model12OR)
+# save the plot
+dev.off()
+
+# export the plot to a .png file
+png(file = "ORmodel2.png", width = 800, height = 600, res = 150)
+
+print(model2OR)
+# save the plot
+dev.off()
+
+# export the plot to a .png file
+png(file = "ORreclass22.png", width = 800, height = 600, res = 150)
+
+print(reclassOR)
+# save the plot
+dev.off()
 
 ```
